@@ -162,7 +162,12 @@ The screenshots above use this pack. It replaces the display's built-in font
 and adds icons and a Klipper boot logo. The display keeps Creality's own
 icons, so stock firmware still works afterwards.
 
-1. **Build it** in a clone of this repo, on any computer with Python 3.11 or newer:
+1. **Download
+   [DWIN_SET.zip](https://github.com/andersevenrud/klipper-dwin-ui/releases/download/assets/DWIN_SET.zip)**
+   and unzip it. It is rebuilt automatically whenever the assets change.
+
+   You can also build it yourself, in a clone of this repo, on any computer
+   with Python 3.11 or newer:
    ```sh
    pip install -e '.[sim]'
    python tools/build_assets.py      # -> build/DWIN_SET
@@ -170,8 +175,9 @@ icons, so stock firmware still works afterwards.
 2. **Prepare an SD card:**
    - Format it as FAT32 with 4 KB clusters, with a single partition of
      8 GB or less.
-   - Copy the `DWIN_SET` folder to the card's root, and put nothing else on
-     the card.
+   - Copy only the `DWIN_SET` folder to the card's root, and put nothing
+     else on the card. The zip's `LICENSES` folder and `README.txt` stay on
+     your computer.
 3. **Flash it:**
    - With the display unpowered, insert the card into the slot on the back
      of the display.

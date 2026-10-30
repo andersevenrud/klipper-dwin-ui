@@ -198,6 +198,17 @@ The labels are as printed on the display PCB. TX is the display's output.
 so commit it along with any asset change. Sources are pinned and
 checksummed in `.cache/`.
 
+**Publishing.** `.github/workflows/assets.yml` rebuilds the pack when
+`tools/build_assets.py`, the theme, the protocol or `assets.json` change on
+`main`, or when started by hand.
+- **Release:** it replaces `DWIN_SET.zip` on the rolling `assets` release,
+  so the README link stays the same.
+- **Zip contents:** besides `DWIN_SET/`, the zip carries the Terminus (OFL)
+  and Tabler (MIT) license texts, which both licenses require on
+  redistribution.
+- **Manifest check:** the build fails if the committed `dwinui/assets.json`
+  doesn't match the pack it just built.
+
 **Memory layout.** Images live in sixteen 32 KB banks. The file's leading
 number is its first bank, and that same number is the image ID in `0x22`
 and the library ID in `0x23`.

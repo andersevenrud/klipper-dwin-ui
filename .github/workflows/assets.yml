@@ -1,0 +1,62 @@
+# Builds the display asset pack (font, icons, boot splash) and publishes it as
+# DWIN_SET.zip on a single rolling release called "assets", so the download
+# link in the README never changes.
+name: Asset pack
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - tools/build_assets.py
+      - dwinui/ui/theme.py
+      - dwinui/protocol.py
+      - dwinui/assets.json
+      - .github/workflows/assets.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: assets
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/cache@v4
+        with:
+          path: .cache
+          key: asset-sources-${{ hashFiles('tools/build_assets.py') }}
+
+      - run: pip install "pillow>=10.1"
+
+      - run: python tools/build_assets.py
+
+      - name: Check that dwinui/assets.json is committed and up to date
+        run: |
+          git diff --exit-code dwinui/assets.json || {
+            echo "::error::dwinui/assets.json differs from the build; run tools/build_assets.py and commit it"
+            exit 1
+          }
+
+      - name: Package
+        run: cd build && zip -r ../DWIN_SET.zip DWIN_SET LICENSES README.txt
+
+      - name: Publish to the "assets" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="Display asset pack, rebuilt automatically from ${GITHUB_SHA::7}. See the README for how to flash it."
+          if ! gh release view assets >/dev/null 2>&1; then
+            gh release create assets --title "Display asset pack" --notes "$notes" --latest=false
+          fi
+          gh release upload assets DWIN_SET.zip --clobber
+          gh release edit assets --notes "$notes"

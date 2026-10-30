@@ -3,9 +3,10 @@
 
     python tools/build_assets.py [--weight n|b]
 
-Writes build/DWIN_SET/ (copy that folder to the SD card root), previews in
-build/preview/, and dwinui/assets.json, which tells the UI the icon ids and
-glyph slots. Sources are downloaded once into .cache/ and verified by SHA-256.
+Writes build/DWIN_SET/ (copy that folder to the SD card root), the
+third-party license texts in build/LICENSES/, previews in build/preview/, and
+dwinui/assets.json, which tells the UI the icon ids and glyph slots. Sources
+are downloaded once into .cache/ and verified by SHA-256.
 
 Display memory layout (32 KB banks, 16 of them):
   bank 0      0_start.jpg   boot splash (replaces Creality's)
@@ -49,10 +50,30 @@ SOURCES = {
     "tabler-icons.css": (
         "https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.49.0/dist/tabler-icons.css",
         "a0562b340ab94e3aca60a144f6b95a056f792744f2bde38a5e5352a2aa0918d0"),
+    "tabler-LICENSE": (
+        "https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.49.0/LICENSE",
+        "b740a1d46122672da62833e97f7e7c8a13fa85cbc7445b584b297cc00dde93db"),
     "klipper-logo.png": (
         "https://raw.githubusercontent.com/Klipper3d/klipper/57cf0759c0b3096daeda3d39e1184a374bfe2b0b/docs/img/klipper-logo.png",
         "9213fcef709d03d91d33b055d63b37defe0af13a9516e77c001c43f034a53728"),
 }
+
+NOTICE = """\
+Asset pack for klipper-dwin-ui (https://github.com/andersevenrud/klipper-dwin-ui)
+
+Copy only the DWIN_SET folder to the root of an empty FAT32 microSD card
+(4 KB clusters, 8 GB or less), insert it into the display while it is off,
+then power up: blue while flashing, orange when done. Then set
+custom_assets: true in dwinui.conf.
+
+Contents:
+  0T5UIC1.HZK  font: Terminus Font by Dimitar Zhekov, converted to the
+               display's bitmap format (SIL Open Font License 1.1, see
+               LICENSES/Terminus-OFL.txt)
+  3.ICO        icons: Tabler Icons (MIT, see LICENSES/Tabler-LICENSE.txt)
+  0_start.jpg  boot splash: the Klipper logo, from
+               https://github.com/Klipper3d/klipper (GPLv3)
+"""
 
 ICON_LIB = 3
 ICON_LIB_MAX_BANK = 8
@@ -281,6 +302,14 @@ def main() -> None:
     splash, portrait = build_splash(fetch("klipper-logo.png"))
     (dwin_set / "0_start.jpg").write_bytes(splash)
     portrait.save(preview / "splash.png")
+
+    licenses = OUT / "LICENSES"
+    licenses.mkdir(exist_ok=True)
+    with tarfile.open(fetch("terminus.tar.gz")) as tar:
+        ofl = next(m for m in tar.getmembers() if m.name.endswith("/OFL.TXT"))
+        (licenses / "Terminus-OFL.txt").write_bytes(tar.extractfile(ofl).read())
+    (licenses / "Tabler-LICENSE.txt").write_bytes(fetch("tabler-LICENSE").read_bytes())
+    (OUT / "README.txt").write_text(NOTICE)
 
     MANIFEST.write_text(json.dumps({
         "icon_lib": ICON_LIB,
