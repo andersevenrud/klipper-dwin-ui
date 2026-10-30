@@ -81,7 +81,10 @@ The installer sets up:
 
 ### 2. Connect the display
 
-**With a Pico:**
+Do one of these, matching how you wired the display.
+
+#### Option 1: Raspberry Pi Pico over USB
+
 1. Install [CircuitPython](https://circuitpython.org/board/raspberry_pi_pico/)
    on the Pico (tested with 10.3.1).
 2. Copy `firmware/rp2040/boot.py` and `firmware/rp2040/code.py` to the
@@ -89,7 +92,7 @@ The installer sets up:
 3. Unplug the Pico, then plug it into the Klipper host. It shows up as
    `/dev/dwin`, which the default config already uses.
 
-**With the Pi's GPIO header:**
+#### Option 2: The Raspberry Pi's GPIO header
 
 ```sh
 ~/klipper-dwin-ui/install/setup-pi-gpio.sh
