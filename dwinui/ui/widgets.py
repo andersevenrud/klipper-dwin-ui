@@ -152,6 +152,25 @@ class Tile(Widget):
         yield self.key, self.area, frames
 
 
+class ScrollBar(Widget):
+    """Thin vertical position indicator; blank when everything fits."""
+
+    def __init__(self, key: str, area: Rect) -> None:
+        self.key, self.area = key, area
+        self.total = self.visible = self.top = 0
+
+    def parts(self) -> Iterator[Part]:
+        x1, y1, x2, y2 = self.area
+        if self.total <= self.visible:
+            yield self.key, self.area, [p.fill(t.BG, *self.area)]
+            return
+        span = y2 - y1 + 1
+        thumb = max(8, span * self.visible // self.total)
+        ty = y1 + (span - thumb) * self.top // (self.total - self.visible)
+        yield self.key, self.area, [p.fill(t.BAR_BG, *self.area),
+                                    p.fill(t.DIM, x1, ty, x2, ty + thumb - 1)]
+
+
 @dataclass
 class Row:
     label: str

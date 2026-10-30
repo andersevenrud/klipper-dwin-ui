@@ -104,3 +104,20 @@ def test_nice_range():
     ymin, ymax, step = nice_range(18.6, 18.9)            # flat: centred, >= MIN_SPAN
     assert ymax - ymin >= MIN_SPAN and ymin <= 18.6 and ymax >= 18.9
     assert nice_range(20.0, 215.0) == (0, 250, 50)       # heating to 210
+
+
+def test_dashboard_scrolls_sensors_with_heaters_pinned():
+    async def go():
+        cfg = Config(long_press_ms=150, dim_timeout=0, dashboard_rows=6)
+        async with Harness(cfg) as h:
+            screen = h.app.top
+            assert isinstance(screen, DashboardScreen)
+            first = screen.visible_sensors()
+            assert first[:2] == ["extruder", "heater_bed"] and len(first) == 6
+            await h.rotate(1)
+            moved = screen.visible_sensors()
+            assert moved[:2] == first[:2] and moved[2] == first[3]
+            await h.rotate(10)                                # clamps at the end
+            assert screen.visible_sensors()[-1] == screen.rest[-1]
+            assert screen.hint.value.startswith("turn: scroll")
+    asyncio.run(go())
