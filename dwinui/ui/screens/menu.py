@@ -97,8 +97,9 @@ class MenuScreen(HeaderScreen):
             Entry("Move", go(MoveScreen), lambda: pr.homed_axes.upper() and f"homed {pr.homed_axes.upper()}",
                   "move"),
             Entry("Extrude", go(ExtrudeScreen), icon="extrude"),
-            tune, *devices,
+            tune,
             Entry("Macros", go(MacrosScreen), icon="macros"),
+            *devices,                                   # Fans and Lights share a row
             Entry("System", go(SystemScreen), icon="system"),
         ]
 
