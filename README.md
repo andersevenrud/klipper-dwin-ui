@@ -1,5 +1,7 @@
 # klipper-dwin-ui
 
+[![Tests](https://github.com/andersevenrud/klipper-dwin-ui/actions/workflows/tests.yml/badge.svg)](https://github.com/andersevenrud/klipper-dwin-ui/actions/workflows/tests.yml)
+
 A KlipperScreen-like interface for the stock **Ender 3 V2 display**, running
 against Klipper through Moonraker. The display, knob and beeper work again,
 without Marlin and without a Klipper fork.
