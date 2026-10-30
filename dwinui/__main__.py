@@ -31,6 +31,8 @@ async def amain(args: argparse.Namespace) -> None:
     cfg = config.load(args.config)
     if args.url:
         cfg.url = args.url
+    if args.display_port:
+        cfg.port = args.display_port
     printer = Printer()
     if args.fake:
         from .sim.fake_moonraker import FakeMoonraker
@@ -58,6 +60,7 @@ def main() -> None:
     ap.add_argument("--sim", action="store_true", help="render to a browser simulator instead of serial")
     ap.add_argument("--fake", action="store_true", help="use a fake printer instead of Moonraker")
     ap.add_argument("--url", help="Moonraker websocket URL (overrides config)")
+    ap.add_argument("--display-port", help="display serial port (overrides config)")
     ap.add_argument("--host", default="127.0.0.1", help="simulator listen address")
     ap.add_argument("--port", type=int, default=8080, help="simulator port")
     ap.add_argument("-v", "--verbose", action="store_true")

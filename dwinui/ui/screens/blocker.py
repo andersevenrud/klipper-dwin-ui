@@ -18,6 +18,7 @@ MSG_LINES = 8
 
 class BlockerScreen(ListScreen):
     title = "Klipper"
+    back_row = False   # nothing to go back to until Klipper is ready
 
     def __init__(self, app) -> None:
         super().__init__(app)

@@ -59,18 +59,21 @@ class MenuScreen(HeaderScreen):
                      lambda: f"{pr.get('gcode_move', 'speed_factor', 1.0) * 100:.0f}% speed")
         temp = Entry("Temp", go(TemperatureScreen), temps)
         if pr.job_active:
+            # Paused is when you'd swap filament; printing is when you'd nudge the head.
             if pr.job_state == "paused":
                 pause = Entry("Resume", lambda: self.api.fire("printer.print.resume"))
+                tool = Entry("Extrude", go(ExtrudeScreen))
             else:
                 pause = Entry("Pause", lambda: self.api.fire("printer.print.pause"))
+                tool = Entry("Move", go(MoveScreen))
             return [
                 pause,
                 Entry("Cancel", self._cancel),
                 tune, temp,
                 Entry("Macros", go(MacrosScreen)),
-                Entry("Move", go(MoveScreen)),
-                Entry("Extrude", go(ExtrudeScreen)),
+                tool,
                 Entry("System", go(SystemScreen)),
+                Entry("Back", self.app.pop),
             ]
         return [
             Entry("Files", go(FilesScreen)),
@@ -80,7 +83,7 @@ class MenuScreen(HeaderScreen):
             tune,
             Entry("Macros", go(MacrosScreen)),
             Entry("System", go(SystemScreen)),
-            Entry("Status", self.app.pop),
+            Entry("Back", self.app.pop),
         ]
 
     def _cancel(self) -> None:

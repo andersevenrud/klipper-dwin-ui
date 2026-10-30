@@ -25,6 +25,7 @@ PIN_ENC_BTN = board.GP4     # active low
 PIN_BEEPER = board.GP5
 BEEP_HZ = 2700
 ENC_DIVISOR = 4             # detents: the V2 encoder gives 4 edges per click
+ENC_INVERT = True           # with A->GP2, B->GP3, clockwise counts down; flip it
 # ----------------------------------------------------------------------------
 
 TAIL = b"\xcc\x33\xc3\x3c"
@@ -103,7 +104,7 @@ while True:
     if pos != last_pos:
         delta = max(-127, min(127, pos - last_pos))
         last_pos += delta
-        send_event(0x01, delta)
+        send_event(0x01, -delta if ENC_INVERT else delta)
 
     # button
     event = keys.events.get()

@@ -118,17 +118,24 @@ class Item:
 
 
 class ListScreen(HeaderScreen):
+    back_row = True   # visible "< Back" entry on top; long press works too
+
     def __init__(self, app: App, items: list[Item] | None = None) -> None:
         super().__init__(app)
-        self.items: list[Item] = items or []
         self.list = ListView("list", (0, t.HEADER_H + 4, p.WIDTH - 1, p.HEIGHT - 50))
         self.editing: Item | None = None
         self.empty_text = ""
+        self._moved = False
         self.widgets.append(self.list)
+        self.set_items(items or [])
 
     def set_items(self, items: list[Item]) -> None:
-        self.items = items
-        self.list.selected = min(self.list.selected, max(0, len(items) - 1))
+        head = [Item("< Back", action=self.app.pop)] if self.back_row else []
+        self.items = head + items
+        if not self._moved:
+            # Start on the first real entry; Back is one step up.
+            self.list.selected = len(head) if items else 0
+        self.list.selected = min(self.list.selected, max(0, len(self.items) - 1))
         self.editing = None
 
     def refresh(self) -> None:
@@ -139,9 +146,10 @@ class ListScreen(HeaderScreen):
             editing = item is self.editing and item.edit is not None
             value = item.edit.text() if editing else (item.value() if item.value else "")
             rows.append(Row(label, value, item.is_enabled(), editing))
+        if self.empty_text and len(self.items) == (1 if self.back_row else 0):
+            rows.append(Row(self.empty_text, enabled=False))
         self.list.rows = rows
         self.list.scroll_to_selection()
-        self.list.empty = self.empty_text
 
     @property
     def current(self) -> Item | None:
@@ -154,6 +162,7 @@ class ListScreen(HeaderScreen):
             self.editing.edit.rotate(delta)
             return
         if self.items:
+            self._moved = True
             self.list.selected = max(0, min(len(self.items) - 1, self.list.selected + delta))
 
     def on_click(self) -> None:

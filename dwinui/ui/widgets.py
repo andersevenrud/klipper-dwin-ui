@@ -139,7 +139,6 @@ class ListView(Widget):
     rows: list[Row] = field(default_factory=list)
     selected: int = 0
     top: int = 0
-    empty: str = ""
 
     @property
     def visible(self) -> int:
@@ -164,11 +163,7 @@ class ListView(Widget):
             area = (x1, ry, right, ry + self.row_h - 1)
             key = f"{self.key}.{i}"
             if idx >= len(self.rows):
-                frames = [p.fill(t.BG, *area)]
-                if idx == 0 and self.empty:
-                    frames.append(p.text(x1 + 6, ry + (self.row_h - ch) // 2,
-                                         self.empty[:chars], self.font, t.DIM, t.BG))
-                yield key, area, frames
+                yield key, area, [p.fill(t.BG, *area)]
                 continue
             row = self.rows[idx]
             sel = idx == self.selected

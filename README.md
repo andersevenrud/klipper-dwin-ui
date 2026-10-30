@@ -33,14 +33,32 @@ the backlight dims, and the next input only wakes the display.
 
 ## Hardware
 
-### Verify first
+### Display connector pinout
 
-These details are **not verified on hardware yet**. Check them before
-wiring:
+The labels are as printed on the display PCB. TX is the display's output
+and RX its input. The stock cable reverses the numbering, so mainboard-end
+pin *n* connects to display pin *11 − n*.
 
-- [ ] **Display connector pinout.** Measure it with a multimeter or read the
-      silkscreen on the display PCB. The 10-pin cable carries 5V, GND, TX,
-      RX, encoder A/B, the encoder button and the beeper.
+| Display pin | Signal | Cable mainboard-end pin | Stock mainboard (Creality V4.2.x) |
+|---|---|---|---|
+| 1 | VCC (5 V) | 10 | 5V |
+| 2 | GND | 9 | GND |
+| 3 | A (encoder) | 8 | PB15 `BTN_EN1` |
+| 4 | B (encoder) | 7 | PB12 `BTN_EN2` |
+| 5 | BEEP | 6 | PB13 `BEEPER_PIN` |
+| 6 | ENT (button) | 5 | PB14 `BTN_ENC` |
+| 7 | TX (display → host) | 4 | PB11 (USART3 RX) |
+| 8 | RX (host → display) | 3 | PB10 (USART3 TX) |
+| 9, 10 | not connected | 2, 1 | — |
+
+Sources: Marlin `pins/stm32f1/pins_BTT_SKR_MINI_E3_common.h` (display
+header, PCB labels) and `pins/stm32f1/pins_CREALITY_V4.h` (mainboard EXP3).
+The two agree once the cable reversal is accounted for. Before inserting
+duponts, beep each hole out against the labelled display pins; that avoids
+any confusion about connector orientation.
+
+### Verify before connecting signals
+
 - [ ] **Logic levels.** The display UART is expected to be 3.3 V. Confirm the
       encoder/button pull-ups go to 3.3 V, not 5 V, before connecting them
       to the RP2040.
@@ -53,14 +71,14 @@ wiring:
 
 | RP2040 | Display |
 |---|---|
-| VBUS (5 V) | 5V |
-| GND | GND |
-| GP0 (UART0 TX) | RX |
-| GP1 (UART0 RX) | TX |
-| GP2 | Encoder A |
-| GP3 | Encoder B |
-| GP4 | Encoder button (active low, internal pull-up) |
-| GP5 | Beeper (PWM, 2.7 kHz) |
+| VBUS (5 V), physical pin 40 | 1 VCC |
+| GND, physical pin 3 or 38 | 2 GND |
+| GP0 (UART0 TX), physical pin 1 | 8 RX |
+| GP1 (UART0 RX), physical pin 2 | 7 TX |
+| GP2, physical pin 4 | 3 A |
+| GP3, physical pin 5 | 4 B |
+| GP4, physical pin 6 | 6 ENT (active low, internal pull-up) |
+| GP5, physical pin 7, through a ~1 kΩ resistor | 5 BEEP (PWM, 2.7 kHz) |
 
 ### Flashing the bridge
 
