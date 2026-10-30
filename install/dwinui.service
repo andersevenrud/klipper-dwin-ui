@@ -1,0 +1,14 @@
+[Unit]
+Description=DWIN display UI for Klipper
+After=moonraker.service
+Wants=moonraker.service
+
+[Service]
+Type=simple
+User=@USER@
+ExecStart=@VENV@/bin/python -m dwinui -c @CONFIG@
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
