@@ -30,7 +30,7 @@ CHAMBER = rgb(0x4C, 0xAF, 0x50)
 GRAPH_BG = rgb(0x18, 0x18, 0x18)
 GRID = rgb(0x33, 0x33, 0x33)
 
-HEADER_H = 36
+HEADER_H = 24
 TOAST_RECT = (0, HEIGHT - 48, WIDTH - 1, HEIGHT - 1)
 
 __all__ = [n for n in dir() if n.isupper()]

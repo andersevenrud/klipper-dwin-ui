@@ -23,7 +23,7 @@ class BlockerScreen(ListScreen):
     def __init__(self, app) -> None:
         super().__init__(app)
         self.list.area = (0, 260, p.WIDTH - 1, p.HEIGHT - 50)
-        self.lines = [Text(f"blk.l{i}", 8, 50 + i * 24, 32, font=1, fg=t.DIM)
+        self.lines = [Text(f"blk.l{i}", 8, t.HEADER_H + 14 + i * 24, 32, font=1, fg=t.DIM)
                       for i in range(MSG_LINES)]
         self.widgets += self.lines
         self.set_items([

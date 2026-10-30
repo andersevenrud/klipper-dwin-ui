@@ -52,8 +52,9 @@ class HeaderScreen(Screen):
     def __init__(self, app: App) -> None:
         super().__init__(app)
         self.header_bg = Box("hdr.bg", (0, 0, p.WIDTH - 1, t.HEADER_H - 1), t.HEADER_BG)
-        self.header_title = Text("hdr.title", 8, 6, 13, font=3, bg=t.HEADER_BG, value=self.title)
-        self.header_temps = Text("hdr.temps", p.WIDTH - 8 - 11 * 8, 10, 11, font=1, fg=t.DIM,
+        text_y = (t.HEADER_H - p.FONTS[1][1]) // 2
+        self.header_title = Text("hdr.title", 8, text_y, 20, font=1, bg=t.HEADER_BG, value=self.title)
+        self.header_temps = Text("hdr.temps", p.WIDTH - 8 - 11 * 8, text_y, 11, font=1, fg=t.DIM,
                                  bg=t.HEADER_BG, align="right")
         self.widgets += [self.header_bg, self.header_title, self.header_temps]
 
