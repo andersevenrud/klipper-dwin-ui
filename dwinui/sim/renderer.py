@@ -71,6 +71,7 @@ class Canvas:
         self.frames_seen = 0
         self.updates = 0
         self.unknown: list[int] = []
+        self.sram = bytearray(32 * 1024)
         self.hzk: dict[int, tuple[int, bytes]] | None = None
         self.icons: dict[int, list[tuple[int, int, bytes]]] = {}
         self.jpgs: dict[int, Path] = {}
@@ -150,6 +151,19 @@ class Canvas:
                 char = reverse.get(code, chr(code))
                 if char != " ":
                     d.text((x + i * cw + cw / 2, y + ch / 2), char, fill=color(fg), font=font, anchor="mm")
+        elif cmd == 0x31:
+            mem, addr = struct.unpack(">BH", args[:3])
+            data = args[3:]
+            if mem == 0x5A:
+                self.sram[addr:addr + len(data)] = data
+        elif cmd == 0x24:
+            x, y, flags, addr = struct.unpack(">HHBH", args[:7])
+            try:
+                img = Image.open(io.BytesIO(bytes(self.sram[addr:]))).convert("RGB")
+            except Exception:  # noqa: BLE001 - garbage in SRAM draws nothing, like the panel
+                self.unknown.append(cmd)
+                return
+            self.buffer.paste(img, (x, y))
         elif cmd == 0x30:
             self.brightness = args[0]
         elif cmd == 0x3D:

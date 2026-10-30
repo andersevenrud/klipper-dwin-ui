@@ -112,6 +112,23 @@ class FakeMoonraker:
                 self.on_error(str(e))
         return asyncio.ensure_future(run())
 
+    async def fetch_file(self, root: str, path: str) -> bytes:
+        """A made-up slicer thumbnail: a sliced part on a transparent background."""
+        import io
+
+        from PIL import Image, ImageDraw
+        size = int(path.rsplit("-", 1)[-1].split("x")[0])
+        img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        d = ImageDraw.Draw(img)
+        s = size / 300
+        d.polygon([(60 * s, 200 * s), (150 * s, 250 * s), (240 * s, 200 * s), (150 * s, 150 * s)], fill=(46, 120, 60))
+        d.polygon([(60 * s, 200 * s), (60 * s, 90 * s), (150 * s, 40 * s), (150 * s, 150 * s)], fill=(70, 170, 90))
+        d.polygon([(150 * s, 150 * s), (150 * s, 40 * s), (240 * s, 90 * s), (240 * s, 200 * s)], fill=(55, 145, 75))
+        buf = io.BytesIO()
+        img.save(buf, "PNG")
+        await asyncio.sleep(0.01)
+        return buf.getvalue()
+
     async def gcode(self, script: str) -> None:
         await self.call("printer.gcode.script", script=script)
 
@@ -126,8 +143,13 @@ class FakeMoonraker:
     async def _m_server_files_metadata(self, filename: str) -> dict:
         for path, _, est, fil in FILES:
             if path == filename:
+                base = path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+                thumbs = [] if "cable_chain" in path else [
+                    {"width": w, "height": w, "size": 0, "relative_path": f".thumbs/{base}-{w}x{w}.png"}
+                    for w in (32, 300)]
                 return {"filename": path, "estimated_time": est, "filament_total": fil,
-                        "layer_height": 0.2, "slicer": "OrcaSlicer", "slicer_version": "2.2.0"}
+                        "layer_height": 0.2, "object_height": 48.0, "slicer": "OrcaSlicer",
+                        "slicer_version": "2.2.0", "thumbnails": thumbs}
         raise RPCError(f"Metadata not available for <{filename}>", 404)
 
     async def _m_printer_objects_query(self, objects: dict) -> dict:

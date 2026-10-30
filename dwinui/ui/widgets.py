@@ -9,9 +9,11 @@ from __future__ import annotations
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
+import hashlib
+
 from .. import protocol as p
 from ..assets import IconRef
-from ..display import Rect
+from ..display import Lazy, Rect
 from . import theme as t
 
 Part = tuple[str, Rect, list[bytes]]
@@ -72,6 +74,32 @@ class Icon(Widget):
             r = self.ref
             yield self.key, (self.x, self.y, self.x + r.w - 1, self.y + r.h - 1), [
                 p.icon(r.lib, r.id, self.x, self.y)]
+
+
+class Thumbnail(Widget):
+    """A JPEG uploaded to the panel's SRAM and drawn from there, or a text
+    placeholder while there is none."""
+
+    def __init__(self, key: str, x: int, y: int, size: int, bg: int) -> None:
+        self.key, self.x, self.y, self.size, self.bg = key, x, y, size, bg
+        self.area = (x, y, x + size - 1, y + size - 1)
+        self.jpeg: bytes | None = None
+        self.placeholder = ""
+
+    def parts(self) -> Iterator[Part]:
+        if self.jpeg:
+            jpeg = self.jpeg
+            sig = hashlib.sha1(jpeg).hexdigest()
+            yield self.key, self.area, Lazy(sig, lambda: [p.sram_write(0, jpeg),
+                                                           p.sram_icon(self.x, self.y, 0)])
+            return
+        cw, ch = p.FONTS[1]
+        text = self.placeholder[:self.size // cw]
+        yield self.key, self.area, [
+            p.fill(t.BG, *self.area),
+            p.text(self.x + (self.size - len(text) * cw) // 2, self.y + (self.size - ch) // 2,
+                   text, 1, t.DIM, t.BG),
+        ]
 
 
 class Text(Widget):

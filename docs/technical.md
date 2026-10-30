@@ -93,7 +93,9 @@ and `src/lcd/dwin/creality/dwin_lcd.cpp`.
 | `11` | `AA 11 flags fg bg x y text` | string. Flags: bit7 width adjust, bit6 draw background, bits 0–3 font |
 | `22` | `AA 22 00 id` | show and cache a JPG |
 | `23` | `AA 23 x y flags\|lib icon` | icon. `0x80` (IBD) draws the icon's own background |
+| `24` | `AA 24 x y flags addr` | draw a JPEG stored in SRAM at `addr` |
 | `30` | `AA 30 level` | backlight |
+| `31` | `AA 31 5A addr data…` | write up to 128 bytes to the 32 KB SRAM (`A5` = 16 KB flash) |
 | `34` | `AA 34 5A A5 dir` | orientation. `1` = portrait 272×480. The panel acknowledges with `AA 34 'O' 'K'` |
 | `3D` | `AA 3D` | flush the drawing buffer to the panel |
 
@@ -103,6 +105,18 @@ and `src/lcd/dwin/creality/dwin_lcd.cpp`.
   fonts 1–5, so the UI uses those.
 - **Characters:** bytes 0x80 and up are read as GB2312 pairs, so there is
   no Latin-1.
+
+**Thumbnails.** The print preview uploads a JPEG with `0x31`, then shows it
+with `0x24`. Marlin's ProUI does its G-code previews the same way
+(`proui/gcode_preview.cpp`).
+- **Source:** dwinui fetches the slicer's PNG over Moonraker's HTTP file
+  API. It picks the smallest thumbnail at least 200 px wide.
+- **Conversion:** the PNG is composited onto the dialog colour and
+  re-encoded as a 200×200 baseline JPEG (4:2:0, quality 85), usually about
+  5 KB, or half a second on the link.
+- **The tail rule:** the frame tail `CC 33 C3 3C` must not occur inside the
+  JPEG data, so on the rare occasion it does, the encoder lowers the
+  quality and tries again.
 
 ## Bridge protocol
 
@@ -235,6 +249,8 @@ uv venv && uv pip install -e '.[dev]'
 .venv/bin/python -m dwinui.sim.harness shots/                 # screenshot tour of every screen
 .venv/bin/python tools/build_assets.py                        # asset pack
 .venv/bin/python tools/readme_screens.py                      # docs/img/screens.png
+.venv/bin/python tools/readme_screens.py --preview ws://printer.local:7125/websocket 3DBenchy.gcode
+                                                              # docs/img/print-preview.png (read-only)
 ```
 
 - **Simulator:** it decodes the exact byte stream the UI sends and renders

@@ -6,6 +6,8 @@ import asyncio
 import itertools
 import json
 import logging
+import urllib.parse
+import urllib.request
 from collections.abc import Callable
 from typing import Any
 
@@ -78,6 +80,18 @@ class Moonraker:
                 log.exception("%s failed", method)
                 self.on_error(str(e) or type(e).__name__)
         return asyncio.create_task(run())
+
+    async def fetch_file(self, root: str, path: str) -> bytes:
+        """Download a file Moonraker serves (e.g. a G-code thumbnail) over HTTP."""
+        parts = urllib.parse.urlsplit(self.url)
+        scheme = "https" if parts.scheme == "wss" else "http"
+        url = f"{scheme}://{parts.netloc}/server/files/{root}/{urllib.parse.quote(path)}"
+        headers = {"X-Api-Key": self.api_key} if self.api_key else {}
+
+        def get() -> bytes:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=10) as r:
+                return r.read()
+        return await asyncio.get_running_loop().run_in_executor(None, get)
 
     async def gcode(self, script: str) -> None:
         await self.call("printer.gcode.script", timeout=None, script=script)

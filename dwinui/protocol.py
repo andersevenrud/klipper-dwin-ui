@@ -179,6 +179,22 @@ def icon(lib: int, icon_id: int, x: int, y: int, flags: int = 0x80) -> bytes:
     return frame(struct.pack(">BHHBB", 0x23, _clamp_x(x), _clamp_y(y), flags | (lib & 0x1F), icon_id))
 
 
+SRAM_CHUNK = 128          # bytes per 0x31 frame, as Marlin's ProUI sends them
+
+
+def sram_write(addr: int, data: bytes) -> bytes:
+    """Store data in the panel's 32 KB SRAM (0x31, memory 0x5A)."""
+    out = b""
+    for i in range(0, len(data), SRAM_CHUNK):
+        out += frame(struct.pack(">BBH", 0x31, 0x5A, addr + i) + data[i:i + SRAM_CHUNK])
+    return out
+
+
+def sram_icon(x: int, y: int, addr: int = 0, flags: int = 0x80) -> bytes:
+    """Show a JPEG stored in SRAM at addr (0x24). flags 0x80 = draw its background."""
+    return frame(struct.pack(">BHHBH", 0x24, _clamp_x(x), _clamp_y(y), flags, addr))
+
+
 def bridge_beep(ms: int) -> bytes:
     ms = max(0, min(0xFFFF, ms))
     return frame(bytes((BRIDGE_CMD, BRIDGE_BEEP, ms >> 8, ms & 0xFF)))

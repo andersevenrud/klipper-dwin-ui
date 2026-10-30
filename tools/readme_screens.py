@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Render the README screenshot strip from the simulator (fake printer,
-custom asset pack). Run tools/build_assets.py first.
+"""Render the README screenshots from the simulator, with the custom asset
+pack (run tools/build_assets.py first).
 
-    python tools/readme_screens.py  # -> docs/img/screens.png
+    python tools/readme_screens.py                    # -> docs/img/screens.png (fake printer)
+    python tools/readme_screens.py --preview ws://printer:7125/websocket 3DBenchy.gcode
+                                                      # -> docs/img/print-preview.png
+
+--preview only reads from the printer: file metadata and the thumbnail.
 """
 
+import argparse
 import asyncio
 import sys
 from pathlib import Path
@@ -15,7 +20,13 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from dwinui.config import Config  # noqa: E402
+from dwinui.moonraker import Moonraker  # noqa: E402
+from dwinui.printer import Printer  # noqa: E402
 from dwinui.sim.harness import BUILT_ASSETS, Harness  # noqa: E402
+from dwinui.sim.link import SimLink  # noqa: E402
+from dwinui.sim.renderer import Canvas  # noqa: E402
+from dwinui.ui.app import App  # noqa: E402
+from dwinui.ui.screens.files import PrintPreview  # noqa: E402
 
 GAP = 24
 SCALE = 2
@@ -39,7 +50,41 @@ async def capture() -> list[Image.Image]:
     return shots
 
 
+async def capture_preview(url: str, filename: str) -> Image.Image:
+    cfg = Config(dim_timeout=0, custom_assets=True)
+    printer = Printer()
+    api = Moonraker(printer, url)
+    link = SimLink(Canvas(BUILT_ASSETS))
+    await link.open()
+    app = App(cfg, link, api, printer)
+    tasks = [asyncio.create_task(c) for c in (api.run(), app.run(), app.services())]
+    try:
+        for _ in range(50):
+            await asyncio.sleep(0.2)
+            if printer.ready:
+                break
+        meta = await api.call("server.files.metadata", filename=filename)
+        app.push(PrintPreview(app, filename, meta))
+        await asyncio.sleep(2)
+        if not app.top.thumb.jpeg:
+            raise SystemExit(f"{filename} has no usable thumbnail")
+        return link.canvas.snapshot(SCALE)
+    finally:
+        for task in tasks:
+            task.cancel()
+
+
 def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--preview", nargs=2, metavar=("URL", "FILE"),
+                    help="render the print preview of FILE from the printer at URL")
+    args = ap.parse_args()
+    if args.preview:
+        img = asyncio.run(capture_preview(*args.preview))
+        out = ROOT / "docs" / "img" / "print-preview.png"
+        img.quantize(colors=128, method=Image.Quantize.FASTOCTREE).save(out, optimize=True)
+        print(f"-> {out.relative_to(ROOT)} ({out.stat().st_size // 1024} KB)")
+        return
     shots = asyncio.run(capture())
     w, h = shots[0].size
     strip = Image.new("RGB", (len(shots) * w + (len(shots) - 1) * GAP * SCALE, h), (255, 255, 255))

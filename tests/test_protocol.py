@@ -83,3 +83,12 @@ def test_points_and_area_move():
     assert many.count(T) == 3                      # 20 + 20 + 5 points
     assert p.area_move(p.MOVE_LEFT, 1, 0x1234, 10, 20, 30, 40) == \
         bytes.fromhex("aa09800001" "1234" "000a0014001e0028") + T
+
+
+def test_sram_upload_and_show():
+    data = bytes(range(256)) + b"x" * 44              # 300 bytes -> 3 frames of <=128
+    out = p.sram_write(0x0000, data)
+    assert out.count(T) == 3
+    assert out.startswith(bytes.fromhex("aa315a0000") + data[:128] + T)
+    assert bytes.fromhex("aa315a0080") in out and bytes.fromhex("aa315a0100") in out
+    assert p.sram_icon(10, 20) == bytes.fromhex("aa24000a0014800000") + T

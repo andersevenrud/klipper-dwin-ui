@@ -8,12 +8,15 @@ without Marlin and without a Klipper fork.
 
 ## Features
 
+<img src="docs/img/print-preview.png" width="272" align="right" alt="Print preview dialog showing a 3DBenchy thumbnail, print time, filament, layer and slicer details">
+
 - **Home screen**, like Mainsail's dashboard: every temperature sensor
   Klipper knows about, a live hotend/bed graph and the toolhead position.
 - **Printing screen** while a job runs: progress, time left, temperatures,
   speed, flow, fan and Z.
 - **Menus:**
-  - **Files:** start a print, with slicer details shown first.
+  - **Files:** start a print from a preview with the slicer's thumbnail,
+    print time and filament.
   - **Temperature:** set targets, or use a preheat preset.
   - **Move:** homing, and jogging with the knob.
   - **Extrude**, and **Tune:** speed, flow, fan and Z babystepping.
@@ -175,3 +178,6 @@ repository; `tools/build_assets.py` downloads it:
 - [Tabler Icons](https://tabler.io/icons) (MIT);
 - the [Klipper](https://github.com/Klipper3d/klipper) logo, used for the
   boot splash.
+
+The print preview screenshot shows
+[#3DBenchy](https://www.3dbenchy.com/) by Creative Tools (CC BY-ND 4.0).
