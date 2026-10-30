@@ -131,3 +131,13 @@ def test_dimming_and_wake_swallows_input():
             assert not h.app.dimmed and h.link.canvas.brightness == 255
             assert isinstance(h.app.top, DashboardScreen)
     run(go())
+
+
+def test_list_rows_keep_width_when_scrollbar_appears():
+    from dwinui.ui.widgets import ListView, Row
+    lv = ListView("l", (0, 40, 271, 430))
+    lv.rows = [Row("a")]
+    (_, short, _), *_ = lv.parts()
+    lv.rows = [Row(str(i)) for i in range(30)]
+    (_, long, _), *_ = lv.parts()
+    assert short == long

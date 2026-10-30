@@ -232,7 +232,10 @@ class ListView(Widget):
         x1, y1, x2, _ = self.area
         cw, ch = p.FONTS[self.font]
         has_sb = len(self.rows) > self.visible
-        right = x2 - (6 if has_sb else 0)
+        # The scrollbar column is always reserved, so rows keep their width
+        # when a scrollbar comes or goes (a narrower redraw would leave a strip
+        # of the old row, e.g. a selection highlight, behind).
+        right = x2 - 6
         chars = (right - x1 + 1 - 12) // cw
         for i in range(self.visible):
             idx = self.top + i
