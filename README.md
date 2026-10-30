@@ -77,7 +77,8 @@ The installer sets up:
 - a config file at `~/printer_data/config/dwinui.conf`, which you can edit
   in Mainsail/Fluidd;
 - the `dwinui` service;
-- permission for Moonraker to restart the service.
+- permission for Moonraker to restart the service. Moonraker picks this up
+  the next time it restarts; the installer tells you when that's needed.
 
 ### 2. Connect the display
 

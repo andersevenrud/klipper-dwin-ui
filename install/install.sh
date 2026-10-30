@@ -31,10 +31,17 @@ sudo systemctl daemon-reload
 sudo systemctl enable dwinui.service
 
 ASVC="$PRINTER_DATA/moonraker.asvc"
+ASVC_ADDED=0
 if [ -f "$ASVC" ] && ! grep -qx dwinui "$ASVC"; then
     echo "==> allowing Moonraker to manage the service"
     echo dwinui >> "$ASVC"
+    ASVC_ADDED=1
 fi
 
 sudo systemctl restart dwinui.service
 echo "Done. Logs: journalctl -u dwinui -f"
+if [ "$ASVC_ADDED" = 1 ]; then
+    echo
+    echo "Restart Moonraker once (when not printing) so Mainsail/Fluidd and the"
+    echo "update manager can control dwinui:  sudo systemctl restart moonraker"
+fi
