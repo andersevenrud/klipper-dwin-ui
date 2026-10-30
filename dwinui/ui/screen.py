@@ -120,10 +120,13 @@ class Item:
 
 class ListScreen(HeaderScreen):
     back_row = True   # visible "< Back" entry on top; long press works too
+    ROW_FONT = 2
+    ROW_H = 38
 
     def __init__(self, app: App, items: list[Item] | None = None) -> None:
         super().__init__(app)
-        self.list = ListView("list", (0, t.HEADER_H + 4, p.WIDTH - 1, p.HEIGHT - 50))
+        self.list = ListView("list", (0, t.HEADER_H + 4, p.WIDTH - 1, p.HEIGHT - 50),
+                             row_h=self.ROW_H, font=self.ROW_FONT)
         self.editing: Item | None = None
         self.empty_text = ""
         self._moved = False
@@ -237,13 +240,15 @@ class ButtonWidget(Widget):
     def __init__(self, key: str, area: Rect, label: str, accent: int) -> None:
         self.key, self.area, self.label, self.accent = key, area, label, accent
         self.selected = False
+        self.idle_bg = t.HEADER_BG
+        self.font = 2
 
     def parts(self):
         x1, y1, x2, y2 = self.area
-        bg = self.accent if self.selected else t.HEADER_BG
-        cw, ch = p.FONTS[2]
+        bg = self.accent if self.selected else self.idle_bg
+        cw, ch = p.FONTS[self.font]
         chars = (x2 - x1 + 1) // cw
         s = fit(self.label, chars, "center").strip()
         tx = x1 + (x2 - x1 + 1 - len(s) * cw) // 2
         yield self.key, self.area, [p.fill(bg, *self.area),
-                                    p.text(tx, y1 + (y2 - y1 + 1 - ch) // 2, s, 2, t.FG, bg)]
+                                    p.text(tx, y1 + (y2 - y1 + 1 - ch) // 2, s, self.font, t.FG, bg)]

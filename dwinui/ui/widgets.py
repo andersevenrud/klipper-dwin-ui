@@ -137,35 +137,55 @@ class Bar(Widget):
 
 
 class Tile(Widget):
-    def __init__(self, key: str, area: Rect) -> None:
-        self.key, self.area = key, area
+    """Menu tile. layout "stack": icon above the label (sub text only if it
+    fits); "row": icon on the left, label and sub text beside it."""
+
+    def __init__(self, key: str, area: Rect, layout: str = "stack", font: int = 2) -> None:
+        self.key, self.area, self.layout, self.font = key, area, layout, font
         self.label = ""
         self.sub = ""
         self.selected = False
         self.enabled = True
+        self.empty = False                     # unused slot: drawn as background
         self.icon: IconRef | None = None       # baked on TILE_BG
         self.icon_sel: IconRef | None = None   # baked on ACCENT
 
     def parts(self) -> Iterator[Part]:
         x1, y1, x2, y2 = self.area
+        if self.empty:
+            yield self.key, self.area, [p.fill(t.BG, *self.area)]
+            return
         bg = t.ACCENT if self.selected else t.TILE_BG
         fg = t.FG if self.enabled else t.DISABLED
         w, h = x2 - x1 + 1, y2 - y1 + 1
         frames = [p.fill(bg, *self.area)]
         icon = self.icon_sel if self.selected else self.icon
-        if icon and self.label:
+        sub_fg = t.FG if self.selected else t.DIM
+        if icon and self.label and self.layout == "row":
+            cw, ch = p.FONTS[self.font]
+            scw, sch = p.FONTS[1]
+            ix = x1 + 6
+            frames.append(p.icon(icon.lib, icon.id, ix, y1 + (h - icon.h) // 2))
+            tx = ix + icon.w + 6
+            room = x2 - tx
+            block = ch + (2 + sch if self.sub else 0)
+            ly = y1 + (h - block) // 2
+            frames.append(p.text(tx, ly, self.label[:room // cw], self.font, fg, bg))
+            if self.sub:
+                frames.append(p.text(tx, ly + ch + 2, self.sub[:room // scw], 1, sub_fg, bg))
+        elif icon and self.label:
             cw, ch = p.FONTS[2]
             scw, sch = p.FONTS[1]
-            block = icon.h + 4 + ch + (2 + sch if self.sub else 0)
+            show_sub = self.sub and icon.h + 4 + ch + 2 + sch + 8 <= h
+            block = icon.h + 4 + ch + (2 + sch if show_sub else 0)
             iy = y1 + (h - block) // 2
             frames.append(p.icon(icon.lib, icon.id, x1 + (w - icon.w) // 2, iy))
             label = self.label[:w // cw]
             ly = iy + icon.h + 4
             frames.append(p.text(x1 + (w - len(label) * cw) // 2, ly, label, 2, fg, bg))
-            if self.sub:
+            if show_sub:
                 sub = self.sub[:w // scw]
-                frames.append(p.text(x1 + (w - len(sub) * scw) // 2, ly + ch + 2, sub, 1,
-                                     t.FG if self.selected else t.DIM, bg))
+                frames.append(p.text(x1 + (w - len(sub) * scw) // 2, ly + ch + 2, sub, 1, sub_fg, bg))
         elif self.label:
             cw, ch = p.FONTS[3]
             chars = w // cw
