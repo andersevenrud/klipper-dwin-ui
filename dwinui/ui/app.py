@@ -21,6 +21,14 @@ log = logging.getLogger(__name__)
 
 TOAST_COLORS = {"info": t.HEADER_BG, "ok": t.OK, "error": t.ERROR}
 
+# The panel can reboot on its own (a power glitch) while the serial link
+# stays up, and then shows its boot screen while we think the UI is still
+# there. It answers the handshake within ~0.4 s when alive, so ping it and
+# redraw everything when it comes back from a silence. LOST_AFTER leaves
+# room for a large flush (a thumbnail upload) delaying the reply.
+HEARTBEAT = 0.5
+LOST_AFTER = 2.0
+
 
 class App:
     def __init__(self, cfg: Config, link: Link, api, printer: Printer) -> None:
@@ -49,6 +57,8 @@ class App:
         self.last_input = time.monotonic()
         self.dimmed = False
         self.brightness = cfg.brightness
+        self._last_reply = time.monotonic()
+        self.panel_lost = False
 
         printer.listen(self.invalidate)
         api.on_error = lambda msg: self.toast(msg, "error")
@@ -265,6 +275,28 @@ class App:
                 self.dimmed = True
                 await self.display.set_brightness(self.cfg.dim_brightness)
 
+    async def frames_loop(self) -> None:
+        """Replies from the panel. Only handshake answers matter."""
+        while True:
+            payload = await self.link.frames.get()
+            if not p.is_handshake_reply(payload):
+                continue
+            self._last_reply = time.monotonic()
+            if self.panel_lost:
+                self.panel_lost = False
+                log.warning("display answers again; redrawing")
+                await self.display.init(self.display.brightness_level)
+                self._full = True
+                self.invalidate()
+
+    async def heartbeat_loop(self) -> None:
+        while True:
+            await asyncio.sleep(HEARTBEAT)
+            await self.link.write(p.handshake())
+            if not self.panel_lost and time.monotonic() - self._last_reply > LOST_AFTER:
+                self.panel_lost = True
+                log.warning("display stopped answering (power glitch?)")
+
     async def set_brightness(self, level: int) -> None:
         self.brightness = level
         await self.display.set_brightness(level)
@@ -276,8 +308,11 @@ class App:
         await self.display.init(self.brightness)
         self.dimmed = False
         self.last_input = time.monotonic()
+        self._last_reply = time.monotonic()
+        self.panel_lost = False
         tasks = [asyncio.create_task(c) for c in
-                 (self.render_loop(), self.input_loop(), self.idle_loop(), self.link.closed.wait())]
+                 (self.render_loop(), self.input_loop(), self.idle_loop(), self.frames_loop(),
+                  self.heartbeat_loop(), self.link.closed.wait())]
         try:
             await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
             for task in tasks:

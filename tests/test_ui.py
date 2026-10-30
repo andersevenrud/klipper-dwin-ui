@@ -141,3 +141,22 @@ def test_list_rows_keep_width_when_scrollbar_appears():
     lv.rows = [Row(str(i)) for i in range(30)]
     (_, long, _), *_ = lv.parts()
     assert short == long
+
+
+def test_redraws_after_panel_power_glitch():
+    from dwinui import protocol as p
+    from dwinui.ui import theme as t
+
+    async def go():
+        async with Harness(Config(long_press_ms=150, dim_timeout=0)) as h:
+            header = p.rgb565_to_rgb(t.HEADER_BG)
+            assert h.link.canvas.screen.getpixel((200, 4)) == header
+            h.link.power(False)                   # panel off, link stays up
+            await h.settle(2.6)
+            assert h.app.panel_lost
+            h.link.power(True)                    # boots blank
+            assert h.link.canvas.screen.getpixel((200, 4)) == (0, 0, 0)
+            await h.settle(1.2)
+            assert not h.app.panel_lost
+            assert h.link.canvas.screen.getpixel((200, 4)) == header
+    run(go())

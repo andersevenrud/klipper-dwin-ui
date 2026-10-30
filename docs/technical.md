@@ -63,6 +63,20 @@ wherever it was started from, the printing screen replaces it and the stack
 returns to the root. After the job ends, the printing screen stays on
 Complete/Cancelled until it's dismissed.
 
+**Panel resets.** The render cache assumes the panel still shows what was
+sent. If the panel reboots on its own (a power glitch), it comes back on its
+boot screen, and only changed values would be redrawn on top of it.
+- **Heartbeat:** a handshake ping every 0.5 s. No "OK" for 2 s marks the
+  panel lost. The first reply after that re-sends orientation and
+  brightness and triggers a full redraw. An unpowered panel goes quiet
+  within about 0.4 s; the 2 s leaves room for a large flush delaying a
+  reply.
+- **Bridge wiring:** when the panel takes its 5 V from the Pico,
+  reconnecting the panel's power also resets the Pico (the inrush current
+  browns it out). The serial port then disappears for about 0.3 s, and the
+  normal reconnect path redraws everything. Both paths were tested by
+  pulling the panel's 5V wire.
+
 **Backends.** Everything that touches hardware goes through `Link`. A new
 backend only has to fill the `frames` and `inputs` queues and implement
 `write()`. `SerialLink` uses plain pyserial with a reader thread and a

@@ -13,12 +13,23 @@ class SimLink(Link):
         self.canvas = canvas or Canvas()
         self._parser = p.FrameParser()
         self.beeps: list[int] = []
+        self.powered = True
 
     async def open(self) -> None:
         self.closed.clear()
 
+    def power(self, on: bool) -> None:
+        """Simulate the panel losing power while the link stays up. It comes
+        back blank (or on its boot splash), knowing nothing of the UI."""
+        if on and not self.powered:
+            self.canvas.reset()
+        self.powered = on
+
     async def write(self, data: bytes) -> None:
         self.bytes_written += len(data)
+        if not self.powered:
+            self._parser.feed(data)
+            return
         for payload in self._parser.feed(data):
             if payload[:1] == b"\x00":
                 self.frames.put_nowait(b"\x00OK")

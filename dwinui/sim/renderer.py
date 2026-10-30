@@ -88,6 +88,14 @@ class Canvas:
             elif m and path.suffix.lower() == ".jpg":
                 self.jpgs[int(m.group(1))] = path
 
+    def reset(self) -> None:
+        """Power-on state: black, or the boot splash if there is one."""
+        self.buffer.paste((0, 0, 0), (0, 0, p.WIDTH, p.HEIGHT))
+        if 0 in self.jpgs:
+            self.apply(bytes((0x22, 0x00, 0x00)))
+        self.screen = self.buffer.copy()
+        self.brightness = 255
+
     def feed(self, data: bytes) -> None:
         for payload in self._parser.feed(data):
             self.apply(payload)
