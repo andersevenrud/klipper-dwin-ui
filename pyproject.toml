@@ -3,6 +3,8 @@ name = "dwinui"
 version = "0.1.0"
 description = "KlipperScreen-like UI for the Ender 3 V2 DWIN display, driven over Moonraker"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
     "pyserial>=3.5",
@@ -13,11 +15,14 @@ dependencies = [
 sim = ["pillow>=10.1"]
 dev = ["pillow>=10.1", "pytest>=8"]
 
+[project.urls]
+Homepage = "https://github.com/andersevenrud/klipper-dwin-ui"
+
 [project.scripts]
 dwinui = "dwinui.__main__:main"
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]

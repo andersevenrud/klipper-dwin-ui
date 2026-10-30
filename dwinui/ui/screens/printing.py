@@ -90,10 +90,10 @@ class PrintingScreen(HeaderScreen):
             self._metadata = {}
             asyncio.ensure_future(self._load_metadata(filename))
 
-        for widget, heater in ((self.hotend, "extruder"), (self.bed, "heater_bed")):
+        for widget, heater, color in ((self.hotend, "extruder", t.HOT), (self.bed, "heater_bed", t.BED)):
             cur, target = pr.temp(heater)
             widget.value = f"{cur:.0f}/{target:.0f}°"
-            widget.fg = t.HOT if target > 0 else t.FG
+            widget.fg = color if target > 0 else t.FG
         self.speed.value = f"{pr.get('gcode_move', 'speed_factor', 1.0) * 100:.0f}%"
         self.flow.value = f"{pr.get('gcode_move', 'extrude_factor', 1.0) * 100:.0f}%"
         self.fan.value = f"{pr.get('fan', 'speed', 0.0) * 100:.0f}%"

@@ -1,254 +1,177 @@
 # klipper-dwin-ui
 
-A KlipperScreen-like UI for the stock **Ender 3 V2 DWIN display** (T5UIC1,
-272×480, rotary encoder) running against Klipper through Moonraker.
+A KlipperScreen-like interface for the stock **Ender 3 V2 display**, running
+against Klipper through Moonraker. The display, knob and beeper work again,
+without Marlin and without a Klipper fork.
 
-The display runs DWIN's own firmware and acts as a dumb serial graphics
-terminal. All UI logic runs on the Klipper host. An RP2040 bridge links the
-display to the host over USB and also handles the encoder, button and beeper.
+![Home, menu and printing screens](docs/img/screens.png)
 
-```
- Ender 3 V2 display ──UART/GPIO── RP2040 (CircuitPython) ──USB── Pi: dwinui ──ws── Moonraker ── Klipper
-```
+## Features
 
-## Screens
+- **Home screen**, like Mainsail's dashboard: every temperature sensor
+  Klipper knows about, a live hotend/bed graph and the toolhead position.
+- **Printing screen** while a job runs: progress, time left, temperatures,
+  speed, flow, fan and Z.
+- **Menus:**
+  - **Files:** start a print, with slicer details shown first.
+  - **Temperature:** set targets, or use a preheat preset.
+  - **Move:** homing, and jogging with the knob.
+  - **Extrude**, and **Tune:** speed, flow, fan and Z babystepping.
+  - **Macros**, and **System:** restarts, emergency stop, host power,
+    backlight.
+- **Knob controls:** turn to move or change a value, press to select, hold
+  to go back.
+- **Optional asset pack:** a sharper font, icons and a Klipper boot logo,
+  flashed from an SD card.
 
-| Screen | What it does |
-|---|---|
-| Status (root) | State, file, hotend and bed temperatures, speed/flow/fan, Z, Z offset, filament, progress, elapsed, remaining and finish time |
-| Menu | 2×4 tile grid. During a print it shows Pause/Resume and Cancel |
-| Files | Newest first. Clicking a file shows slicer metadata, then starts the print |
-| Temperature | Inline target editors, preheat presets from the config, cooldown |
-| Move | Home all/XY/Z, step size, encoder jog (each detent is one step), disable motors |
-| Extrude | Length and speed, extrude/retract, cold-extrude guard |
-| Tune | Speed (M220), flow (M221), fan (M106), babystep Z (`SET_GCODE_OFFSET Z_ADJUST MOVE=1`), heater targets |
-| Macros | `gcode_macro` objects. Names starting with `_` are hidden by default |
-| System | E-stop, firmware restart, Klipper restart, host reboot/shutdown, backlight |
-| Blocker | Takes over while Moonraker or Klippy isn't ready: shows the state message and restart actions |
+## What you need
 
-**Input:** rotate to move the selection or change a value, click to select,
-and hold (600 ms) to go back or cancel an edit. Error responses (`!! ...`)
-and failed requests show as red toasts with a beep. After two minutes idle
-the backlight dims, and the next input only wakes the display.
+- An Ender 3 V2 display. The asset pack needs the usual DWIN version, with a
+  microSD slot on the back; TJC clone panels can't take it.
+- A Klipper host running Moonraker.
+- One of:
+  - **A Raspberry Pi Pico**, or any RP2040 board that runs CircuitPython.
+    It plugs into the host over USB, so any host works.
+  - **The Klipper host's own GPIO header**, if the host is a Raspberry Pi
+    3, 4 or Zero 2 W with these pins free.
+- Dupont jumper wires, and a ~1 kΩ resistor for the beeper.
 
-## Hardware
+## Wiring
 
-### Display connector pinout
+Leave the stock cable plugged into the display and use its other end, the
+one that normally goes into the mainboard. Push the dupont pins into its
+holes:
 
-The labels are as printed on the display PCB. TX is the display's output
-and RX its input. The stock cable reverses the numbering, so mainboard-end
-pin *n* connects to display pin *11 − n*.
+![Pinout of the cable's mainboard-end plug](docs/img/plug-pinout.svg)
 
-| Display pin | Signal | Cable mainboard-end pin | Stock mainboard (Creality V4.2.x) |
+| Hole | Signal | Raspberry Pi Pico | Raspberry Pi GPIO |
 |---|---|---|---|
-| 1 | VCC (5 V) | 10 | 5V |
-| 2 | GND | 9 | GND |
-| 3 | A (encoder) | 8 | PB15 `BTN_EN1` |
-| 4 | B (encoder) | 7 | PB12 `BTN_EN2` |
-| 5 | BEEP | 6 | PB13 `BEEPER_PIN` |
-| 6 | ENT (button) | 5 | PB14 `BTN_ENC` |
-| 7 | TX (display → host) | 4 | PB11 (USART3 RX) |
-| 8 | RX (host → display) | 3 | PB10 (USART3 TX) |
-| 9, 10 | not connected | 2, 1 | — |
+| 10 | 5V | VBUS (pin 40) | 5V (pin 4) |
+| 9 | GND | GND (pin 38) | GND (pin 6) |
+| 3 | RX | GP0 (pin 1) | GPIO14 (pin 8) |
+| 4 | TX | GP1 (pin 2) | GPIO15 (pin 10) |
+| 8 | A | GP2 (pin 4) | GPIO17 (pin 11) |
+| 7 | B | GP3 (pin 5) | GPIO27 (pin 13) |
+| 5 | ENT | GP4 (pin 6) | GPIO22 (pin 15) |
+| 6 | BEEP | GP5 (pin 7), through 1 kΩ | GPIO18 (pin 12), through 1 kΩ |
+| 1, 2 | not used | | |
 
-Sources: Marlin `pins/stm32f1/pins_BTT_SKR_MINI_E3_common.h` (display
-header, PCB labels) and `pins/stm32f1/pins_CREALITY_V4.h` (mainboard EXP3).
-The two agree once the cable reversal is accounted for. Before inserting
-duponts, beep each hole out against the labelled display pins; that avoids
-any confusion about connector orientation.
+Plugs are easy to read mirrored. Before you power anything, check with a
+multimeter that hole 9 connects to the display's `GND` pin and hole 10 to
+its `VCC` pin.
 
-### Verify before connecting signals
+## Install
 
-- [ ] **Logic levels.** The display UART is expected to be 3.3 V. Confirm the
-      encoder/button pull-ups go to 3.3 V, not 5 V, before connecting them
-      to the RP2040.
-- [ ] **Beeper drive.** Check whether the beeper line drives a transistor on
-      the display board or the buzzer directly. An RP2040 pin supplies only
-      a few mA.
-- [ ] **Encoder direction.** If it's backwards, set `invert_encoder: true`.
-
-### Bridge wiring (defaults in `firmware/rp2040/code.py`)
-
-| RP2040 | Display |
-|---|---|
-| VBUS (5 V), physical pin 40 | 1 VCC |
-| GND, physical pin 3 or 38 | 2 GND |
-| GP0 (UART0 TX), physical pin 1 | 8 RX |
-| GP1 (UART0 RX), physical pin 2 | 7 TX |
-| GP2, physical pin 4 | 3 A |
-| GP3, physical pin 5 | 4 B |
-| GP4, physical pin 6 | 6 ENT (active low, internal pull-up) |
-| GP5, physical pin 7, through a ~1 kΩ resistor | 5 BEEP (PWM, 2.7 kHz) |
-
-### Flashing the bridge
-
-1. Install CircuitPython 9.x for your board. `boot.py` needs 8.0 or newer.
-2. Copy `firmware/rp2040/boot.py` and `code.py` to `CIRCUITPY`.
-3. Power-cycle the board so `boot.py` runs. The board then shows up as
-   `/dev/serial/by-id/usb-dwinui_DWIN_Bridge_<serial>-if02` (the data port).
-   `if00` is the REPL console.
-
-Bridge protocol: host→display frames pass through unchanged. The bridge
-adds frames with the unused command byte `0xEE`:
-
-| Direction | Frame | Meaning |
-|---|---|---|
-| bridge → host | `AA EE 01 <int8 delta> CC 33 C3 3C` | encoder detents since last report |
-| bridge → host | `AA EE 02 <1/0> CC 33 C3 3C` | button press / release |
-| host → bridge | `AA EE 10 <ms_hi> <ms_lo> CC 33 C3 3C` | beep (handled on the bridge, not forwarded) |
-
-Display→host bytes are forwarded as whole frames, so an injected event never
-lands inside a display reply.
-
-## Install on the Klipper host
+### 1. Install dwinui on the Klipper host
 
 ```sh
-cd ~ && git clone <this repo> klipper-dwin-ui
+cd ~ && git clone https://github.com/andersevenrud/klipper-dwin-ui.git
 ~/klipper-dwin-ui/install/install.sh
 ```
 
 The installer sets up:
+- a virtualenv;
+- a config file at `~/printer_data/config/dwinui.conf`, which you can edit
+  in Mainsail/Fluidd;
+- the `dwinui` service;
+- permission for Moonraker to restart the service.
 
-- the `~/dwinui-env` virtualenv,
-- `~/printer_data/config/dwinui.conf`, copied from
-  `config/dwinui.example.conf` only if it doesn't exist yet,
-- a udev rule (`/dev/dwin`),
-- the `dwinui.service` systemd unit,
-- a `dwinui` line in `moonraker.asvc`, so Mainsail/Fluidd can restart the
-  service.
+### 2. Connect the display
 
-Optional Moonraker updates (`moonraker.conf`):
+**With a Pico:**
+1. Install [CircuitPython](https://circuitpython.org/board/raspberry_pi_pico/)
+   on the Pico (tested with 10.3.1).
+2. Copy `firmware/rp2040/boot.py` and `firmware/rp2040/code.py` to the
+   `CIRCUITPY` drive.
+3. Unplug the Pico, then plug it into the Klipper host. It shows up as
+   `/dev/dwin`, which the default config already uses.
+
+**With the Pi's GPIO header:**
+
+```sh
+~/klipper-dwin-ui/install/setup-pi-gpio.sh
+sudo reboot
+```
+
+Then set the backend in `dwinui.conf`:
+
+```ini
+[display]
+backend: pi
+beeper_pwm: /sys/class/pwm/pwmchip0
+```
+
+### 3. Start it
+
+```sh
+sudo systemctl restart dwinui
+journalctl -u dwinui -f        # look for "display handshake ok"
+```
+
+If the knob turns the wrong way, set `invert_encoder: true` under
+`[display]`. Everything else in `dwinui.conf` (preheat presets, dimming,
+feed rates) is commented.
+
+### Updates
+
+Add this to `moonraker.conf` to update dwinui from Mainsail/Fluidd:
 
 ```ini
 [update_manager dwinui]
 type: git_repo
 path: ~/klipper-dwin-ui
-origin: <this repo's URL>
+origin: https://github.com/andersevenrud/klipper-dwin-ui.git
 primary_branch: main
 virtualenv: ~/dwinui-env
 requirements: requirements.txt
 managed_services: dwinui
 ```
 
-Logs: `journalctl -u dwinui -f`.
+## Optional: font, icons and boot logo
 
-## Simulator
+The screenshots above use this pack. It replaces the display's built-in font
+and adds icons and a Klipper boot logo. The display keeps Creality's own
+icons, so stock firmware still works afterwards.
 
-The simulator needs no hardware. It decodes the exact byte stream the UI
-would send and renders it with Pillow.
+1. **Build it** in a clone of this repo, on any computer with Python 3.11 or newer:
+   ```sh
+   pip install -e '.[sim]'
+   python tools/build_assets.py      # -> build/DWIN_SET
+   ```
+2. **Prepare an SD card:**
+   - Format it as FAT32 with 4 KB clusters, with a single partition of
+     8 GB or less.
+   - Copy the `DWIN_SET` folder to the card's root, and put nothing else on
+     the card.
+3. **Flash it:**
+   - With the display unpowered, insert the card into the slot on the back
+     of the display.
+   - Power up. The screen turns **blue** while flashing, then **orange**
+     when done.
+   - Power off and remove the card.
+4. **Turn it on** with `custom_assets: true` in `dwinui.conf`, then restart
+   dwinui.
 
-```sh
-uv venv && uv pip install -e '.[dev]'
-.venv/bin/dwinui --sim --fake                     # fake printer, http://127.0.0.1:8080/
-.venv/bin/dwinui --sim --url ws://klipper-ender.local:7125/websocket   # real printer
-.venv/bin/python -m dwinui.sim.harness shots/     # screenshot tour of every screen
-.venv/bin/python -m pytest
-```
+To undo it, flash the
+[stock files](https://github.com/mriscoc/Ender3V2S1/tree/Ender3V2S1-Bugfix/display%20assets/stock).
 
-In the browser, the arrow keys and mouse wheel turn the encoder, Enter
-clicks, and Esc long-presses (back). The page also shows how many bytes have
-been sent, to keep an eye on the ~11 KB/s link budget.
+## More
 
-## Layout
+[docs/technical.md](docs/technical.md) covers:
+- the display protocol and the bridge protocol;
+- the full connector pinout and where it comes from;
+- the asset pack format;
+- the architecture;
+- the simulator, which lets you try the UI in a browser without hardware.
 
-```
-dwinui/
-  protocol.py     frame builders + stream parser (verified against Marlin)
-  link.py         Link interface; SerialLink (bridge or plain USB-UART)
-  display.py      handshake, batching, per-widget render cache, invalidation
-  moonraker.py    JSON-RPC client, reconnects, Klippy state tracking
-  printer.py      subscribed state model
-  config.py       INI loader
-  ui/app.py       screen stack, input/long-press, toasts, dimming, render loop
-  ui/widgets.py   Text, Bar, Tile, ListView (each yields keyed frame parts)
-  ui/screen.py    Screen, ListScreen with inline NumberEdit/Adjust editors, Confirm
-  ui/screens/     status, menu, files, temperature, move, extrude, tune, macros, system, blocker
-  sim/            renderer, SimLink, FakeMoonraker, browser viewer, scripted harness
-firmware/rp2040/  CircuitPython bridge
-install/          udev rule, systemd unit, installer
-```
+## License
 
-**Rendering.** Widgets produce DWIN frames under stable keys. The display
-skips a key when its frames match what is already on the panel, so a render
-pass only sends what changed. Text fields are fixed-width and padded with
-background-filled cells, so a new value overwrites the old one in a single
-frame. Opening a full screen clears the panel. Dialogs and toasts are
-overlays: closing one blanks its area and redraws only the widgets
-underneath.
+MIT, see [LICENSE](LICENSE).
 
-**Adding a Pi GPIO backend.** Subclass `Link`. Read display replies from the
-UART into `frames`, and push `Rotate`/`Button` events from evdev (for
-example, the `rotary-encoder` overlay) into `inputs`.
-
-## Protocol notes
-
-Command bytes were checked against Marlin `src/lcd/dwin/common/dwin_api.cpp`
-and `src/lcd/dwin/creality/dwin_lcd.cpp`:
-
-| Cmd | Frame | |
-|---|---|---|
-| `00` | `AA 00` | handshake. The reply is `AA 00 'O' 'K'` |
-| `01` | `AA 01 color` | clear |
-| `03` | `AA 03 color x1 y1 x2 y2` | line |
-| `05` | `AA 05 mode color x1 y1 x2 y2` | rectangle: 0 frame, 1 fill, 2 XOR |
-| `11` | `AA 11 flags fg bg x y text` | string. Flags: bit7 width adjust, bit6 draw background, bits 0–3 font |
-| `22` | `AA 22 00 id` | show and cache a JPG |
-| `23` | `AA 23 x y flags\|lib icon` | icon. Creality's UI uses flags `0x80` |
-| `30` | `AA 30 level` | backlight |
-| `34` | `AA 34 5A A5 dir` | orientation. `1` = portrait 272×480 |
-| `3D` | `AA 3D` | flush the drawing buffer to the panel |
-
-All frames end with `CC 33 C3 3C`. Words are big-endian and colours RGB565.
-Fonts 0–9 run from 6×12 to 32×64, but **TJC clone panels only have fonts
-1–5**, so the UI uses those.
-
-## Custom asset pack (font, icons, splash)
-
-`tools/build_assets.py` builds a `DWIN_SET` folder for the display's microSD
-slot:
-
-| File | Bank | Contents |
-|---|---|---|
-| `0T5UIC1.HZK` | font memory | [Terminus](https://terminus-font.sourceforge.net/) Bold (OFL) in all 10 sizes, plus symbols (`° ← → ↑ ↓ … • ± × ▲ ▼ ▶ ◀ ✓ µ`) in unused control-code slots |
-| `0_start.jpg` | 0 | boot splash: the Klipper logo |
-| `3.ICO` | 3–4 | [Tabler Icons](https://tabler.io/icons) (MIT), already drawn on the UI's tile and background colours |
-
-Banks 1–2 (the stock language images) and 9–15 (the stock `9.ICO`) are left
-alone, so stock firmware keeps working.
-
-```sh
-.venv/bin/python tools/build_assets.py    # -> build/DWIN_SET, build/preview, dwinui/assets.json
-```
-
-The script downloads its sources once into `.cache/` and checks their
-SHA-256. It also regenerates `dwinui/assets.json`, which tells the UI the
-icon IDs and symbol slots, so commit that file along with any asset change.
-
-**Format notes:**
-- The font file holds ten 1-bit tables of 128 ASCII glyphs. Rows run top to
-  bottom, padded to whole bytes, with the most significant bit as the
-  leftmost pixel. Bytes 0x80 and up are read as GB2312, so there is no
-  Latin-1.
-- An `.ICO` is a 4 KB directory of 256 × 16-byte big-endian entries (width,
-  height, offset, 24-bit length), followed by baseline JPEGs.
-- The library ID in `0x23` and the image ID in `0x22` are both the 32 KB
-  bank number.
-- Splash JPEGs are stored landscape (480×272), with the portrait content
-  rotated 90° counter-clockwise.
-
-**Flashing:**
-1. Use an SD card formatted as MBR, FAT32 with 4 KB clusters, ideally a
-   single partition of 8 GB or less.
-2. Copy `build/DWIN_SET` to the card root, and put nothing else on the card.
-3. With the display unpowered, insert the card, then power up. The screen
-   turns blue while flashing and orange when done.
-4. Power off, remove the card, then set `custom_assets: true` in
-   `dwinui.conf`.
-
-To go back, flash the
-[stock set](https://github.com/mriscoc/Ender3V2S1/tree/Ender3V2S1-Bugfix/display%20assets/stock).
-
-To preview with the real assets, run
-`dwinui --sim --fake --custom-assets`. The simulator then draws text and
-icons from the built `.HZK` and `.ICO`, so the preview matches the panel
-pixel for pixel.
+The asset pack is built from third-party work that isn't stored in this
+repository; `tools/build_assets.py` downloads it:
+- [Terminus Font](https://terminus-font.sourceforge.net/) (SIL Open Font
+  License 1.1);
+- [Tabler Icons](https://tabler.io/icons) (MIT);
+- the [Klipper](https://github.com/Klipper3d/klipper) logo, used for the
+  boot splash.

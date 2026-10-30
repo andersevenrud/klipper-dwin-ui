@@ -7,7 +7,7 @@ import asyncio
 import logging
 
 from . import config
-from .link import Link, LinkClosed, SerialLink
+from .link import Link, LinkClosed, PiLink, SerialLink
 from .moonraker import Moonraker
 from .printer import Printer
 from .ui.app import App
@@ -50,6 +50,9 @@ async def amain(args: argparse.Namespace) -> None:
         from .sim.web import Viewer
         link: Link = SimLink(Canvas(BUILT_ASSETS if cfg.custom_assets else None))
         tasks.append(Viewer(link, cfg.long_press_ms).serve(args.host, args.port))
+    elif cfg.backend == "pi":
+        link = PiLink(cfg.port, cfg.baud, cfg.encoder_device, cfg.button_device,
+                      cfg.beeper_pwm, cfg.beeper_hz)
     else:
         link = SerialLink(cfg.port, cfg.baud, bridge=cfg.backend == "bridge")
 

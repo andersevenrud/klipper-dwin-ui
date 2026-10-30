@@ -19,7 +19,7 @@ class Config:
     # [display]
     port: str = "/dev/dwin"
     baud: int = 115200
-    backend: str = "bridge"            # bridge | serial
+    backend: str = "bridge"            # bridge | serial | pi
     brightness: int = 255
     dim_brightness: int = 24
     dim_timeout: float = 120.0         # seconds, 0 disables
@@ -28,6 +28,11 @@ class Config:
     beep_on_click: bool = False
     beep_ms: int = 20
     custom_assets: bool = False        # True once build/DWIN_SET is flashed
+    # backend = pi
+    encoder_device: str = "auto"       # input device path/glob, or auto-detect
+    button_device: str = "auto"
+    beeper_pwm: str = ""               # e.g. /sys/class/pwm/pwmchip0 (empty = no beeper)
+    beeper_hz: int = 2700
     # [moonraker]
     url: str = "ws://localhost:7125/websocket"
     api_key: str | None = None
@@ -76,7 +81,8 @@ def load(path: str | Path | None) -> Config:
         "port": str, "baud": int, "backend": str, "brightness": int,
         "dim_brightness": int, "dim_timeout": float, "long_press_ms": int,
         "invert_encoder": bool, "beep_on_click": bool, "beep_ms": int,
-        "custom_assets": bool,
+        "custom_assets": bool, "encoder_device": str, "button_device": str,
+        "beeper_pwm": str, "beeper_hz": int,
     })
     section("moonraker", {"url": str, "api_key": str})
     section("ui", {
@@ -94,6 +100,8 @@ def load(path: str | Path | None) -> Config:
     ]
     if presets:
         cfg.presets = presets
-    if cfg.backend not in ("bridge", "serial"):
+    if cfg.backend not in ("bridge", "serial", "pi"):
         raise ValueError(f"unknown display backend {cfg.backend!r}")
+    if cfg.backend == "pi" and not parser.has_option("display", "port"):
+        cfg.port = "/dev/serial0"
     return cfg

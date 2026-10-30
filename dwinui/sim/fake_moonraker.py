@@ -20,7 +20,7 @@ FILES = [
     ("voron_cable_chain_x.gcode", 26 * 3600, 5 * 3600 + 2 * 60, 21400.0),
     ("filament_clip.gcode", 900, 9 * 60, 310.0),
 ]
-# Mirrors a real printer's sensor set (klipper-ender).
+# Mirrors a real printer's sensor set (Cartographer probe, CAN toolhead).
 SENSORS = {
     "temperature_sensor Chamber": 21.0, "temperature_sensor Toolhead_MCU": 31.0,
     "temperature_fan Mainboard_MCU": 29.0, "temperature_sensor cartographer_coil": 24.0,

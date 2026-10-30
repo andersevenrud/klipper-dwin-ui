@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" width="640" height="400" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+  <title>Ender 3 V2 display cable, mainboard-end plug, looking into the holes with the key bump up. Top row from left: 1 NC, 3 RX, 5 ENT, 7 B, 9 GND. Bottom row: 2 NC, 4 TX, 6 BEEP, 8 A, 10 5V.</title>
+  <rect x="0" y="0" width="640" height="400" rx="14" fill="#f4f5f7"/>
+
+  <text x="320" y="26" text-anchor="middle" font-size="14" font-weight="600" fill="#1d232a">Stock cable, end that normally goes into the mainboard</text>
+
+  <!-- end labels -->
+  <g font-size="12" fill="#5a6775" text-anchor="middle">
+    <text x="62" y="214">unused</text><text x="62" y="230">end</text>
+    <text x="578" y="214">power</text><text x="578" y="230">end</text>
+  </g>
+
+  <!-- plug -->
+  <rect x="285" y="120" width="70" height="22" rx="3" fill="#2a3037" stroke="#474f59" stroke-width="2"/>
+  <text x="320" y="136" text-anchor="middle" font-size="10" fill="#e9edf1">KEY</text>
+  <rect x="112" y="140" width="416" height="148" rx="10" fill="#2a3037" stroke="#474f59" stroke-width="2"/>
+  <path d="M128 154 L144 154 L128 170 Z" fill="#e9edf1" opacity=".85"/>
+
+  <!-- leader lines -->
+  <g stroke="#c4ccd4" stroke-width="1.5">
+    <line x1="170" y1="92" x2="170" y2="162"/><line x1="245" y1="92" x2="245" y2="162"/>
+    <line x1="320" y1="92" x2="320" y2="120"/><line x1="395" y1="92" x2="395" y2="162"/>
+    <line x1="470" y1="92" x2="470" y2="162"/>
+    <line x1="170" y1="266" x2="170" y2="318"/><line x1="245" y1="266" x2="245" y2="318"/>
+    <line x1="320" y1="266" x2="320" y2="318"/><line x1="395" y1="266" x2="395" y2="318"/>
+    <line x1="470" y1="266" x2="470" y2="318"/>
+  </g>
+
+  <!-- signal chips -->
+  <g font-size="13" font-weight="600" text-anchor="middle">
+    <rect x="138" y="66" width="64" height="26" rx="4" fill="#ffffff" stroke="#8a94a0" stroke-dasharray="4 3"/>
+    <text x="170" y="84" fill="#5a6775">NC</text>
+    <rect x="213" y="66" width="64" height="26" rx="4" fill="#1d6ccc"/><text x="245" y="84" fill="#fff">RX</text>
+    <rect x="288" y="66" width="64" height="26" rx="4" fill="#b86f0c"/><text x="320" y="84" fill="#fff">ENT</text>
+    <rect x="363" y="66" width="64" height="26" rx="4" fill="#1a8d52"/><text x="395" y="84" fill="#fff">B</text>
+    <rect x="438" y="66" width="64" height="26" rx="4" fill="#252c34"/><text x="470" y="84" fill="#fff">GND</text>
+
+    <rect x="138" y="318" width="64" height="26" rx="4" fill="#ffffff" stroke="#8a94a0" stroke-dasharray="4 3"/>
+    <text x="170" y="336" fill="#5a6775">NC</text>
+    <rect x="213" y="318" width="64" height="26" rx="4" fill="#1d6ccc"/><text x="245" y="336" fill="#fff">TX</text>
+    <rect x="288" y="318" width="64" height="26" rx="4" fill="#b86f0c"/><text x="320" y="336" fill="#fff">BEEP</text>
+    <rect x="363" y="318" width="64" height="26" rx="4" fill="#1a8d52"/><text x="395" y="336" fill="#fff">A</text>
+    <rect x="438" y="318" width="64" height="26" rx="4" fill="#c8322b"/><text x="470" y="336" fill="#fff">5V</text>
+  </g>
+
+  <!-- holes -->
+  <g font-size="15" font-weight="600" text-anchor="middle" fill="#e9edf1">
+    <rect x="153" y="162" width="34" height="34" rx="3" fill="#0b0d10"/><text x="170" y="185">1</text>
+    <rect x="228" y="162" width="34" height="34" rx="3" fill="#0b0d10"/><text x="245" y="185">3</text>
+    <rect x="303" y="162" width="34" height="34" rx="3" fill="#0b0d10"/><text x="320" y="185">5</text>
+    <rect x="378" y="162" width="34" height="34" rx="3" fill="#0b0d10"/><text x="395" y="185">7</text>
+    <rect x="453" y="162" width="34" height="34" rx="3" fill="#0b0d10"/><text x="470" y="185">9</text>
+    <rect x="153" y="232" width="34" height="34" rx="3" fill="#0b0d10"/><text x="170" y="255">2</text>
+    <rect x="228" y="232" width="34" height="34" rx="3" fill="#0b0d10"/><text x="245" y="255">4</text>
+    <rect x="303" y="232" width="34" height="34" rx="3" fill="#0b0d10"/><text x="320" y="255">6</text>
+    <rect x="378" y="232" width="34" height="34" rx="3" fill="#0b0d10"/><text x="395" y="255">8</text>
+    <rect x="453" y="232" width="34" height="34" rx="3" fill="#0b0d10"/><text x="470" y="255">10</text>
+  </g>
+
+  <text x="320" y="378" text-anchor="middle" font-size="12" fill="#5a6775">Looking into the holes, key bump up. The triangle marks hole 1.</text>
+</svg>
