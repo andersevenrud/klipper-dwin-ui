@@ -20,8 +20,8 @@ without Marlin and without a Klipper fork.
   - **Extrude**, and **Tune:** speed, flow, fan and Z babystepping.
   - **Macros**, and **System:** restarts, emergency stop, host power,
     backlight.
-- **Knob controls:** turn to move or change a value, press to select, hold
-  to go back.
+- **Knob controls:** turn, press, and hold to go back; see
+  [Controls](#controls).
 - **Optional asset pack:** a sharper font, icons and a Klipper boot logo,
   flashed from an SD card.
 
@@ -127,6 +127,34 @@ virtualenv: ~/dwinui-env
 requirements: requirements.txt
 managed_services: dwinui
 ```
+
+## Controls
+
+Everything works with the knob: **turn** it, **press** it, or **hold** it
+down for about half a second (600 ms).
+
+| Where | Turn | Press | Hold |
+|---|---|---|---|
+| Home screen | scroll the sensor list, if it has more sensors than fit | open the menu | — |
+| Menu and lists | move the highlight | open or select it | go back |
+| Editing a value (orange row) | change it; spin fast for bigger steps | save | cancel without saving |
+| Jogging or Z offset (`◀▶` row) | move immediately | done | done |
+| Dialogs | choose a button | confirm the choice | close |
+| Printing screen | — | open the menu | — |
+| After a print | — | return home | — |
+
+- **Holding:** it acts as soon as you've held long enough, so you don't need
+  to let go first.
+- **Going back without holding:** every list has a **← Back** row, and the
+  menu has a **Back** tile.
+- **Dimmed display:** after two minutes idle the backlight dims. The next
+  turn or press only wakes it up, so nothing gets selected by accident.
+
+You can change these in `dwinui.conf` under `[display]`:
+- `long_press_ms`: how long to hold;
+- `invert_encoder`: flips the turning direction;
+- `dim_timeout`: idle time before dimming, in seconds; `0` turns dimming
+  off.
 
 ## Optional: font, icons and boot logo
 
