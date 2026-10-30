@@ -115,7 +115,8 @@ class PrintingScreen(HeaderScreen):
             self.finish.value = "Done at " + time.strftime("%H:%M", time.localtime(time.time() + remaining))
         else:
             self.finish.value = ""
-        self.hint.value = "press: menu" if pr.job_active else "press: done"
+        # Only after the job ends: a press is then the way back to the home screen.
+        self.hint.value = "" if pr.job_active else "Press to return home"
 
     def _remaining(self, progress: float, elapsed: float) -> float | None:
         estimate = self._metadata.get("estimated_time")

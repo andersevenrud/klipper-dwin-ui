@@ -119,5 +119,5 @@ def test_dashboard_scrolls_sensors_with_heaters_pinned():
             assert moved[:2] == first[:2] and moved[2] == first[3]
             await h.rotate(10)                                # clamps at the end
             assert screen.visible_sensors()[-1] == screen.rest[-1]
-            assert screen.hint.value.startswith("turn: scroll")
+            assert screen.scrollbar.total > screen.scrollbar.visible
     asyncio.run(go())

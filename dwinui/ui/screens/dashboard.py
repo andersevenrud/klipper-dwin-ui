@@ -3,7 +3,7 @@
 Like Mainsail's dashboard. The sensor list comes from Klipper's `heaters`
 object, so it adapts to whatever the printer has. Hotend and bed stay pinned
 on top; when there are more sensors than `dashboard_rows`, turning the knob
-scrolls the rest. Click opens the menu.
+scrolls the rest (a scrollbar shows when there is more). Click opens the menu.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from .printing import STATE_LABELS
 
 TOP = t.HEADER_H + 4
 ROW = 20             # font 1 (8x16), 32 columns
-GRAPH_BOTTOM = 410   # the graph takes whatever the rows leave above this
+GRAPH_BOTTOM = 442   # the graph takes whatever the rows leave above this
 # Columns, in characters: name | power/fan % | temperature | target
 NAME_W, PCT_W, TEMP_W, TGT_W = 15, 5, 7, 5
 VALUES_X = 8 + NAME_W * 8
@@ -64,8 +64,7 @@ class DashboardScreen(HeaderScreen):
         self.columns = Text("db.cols", VALUES_X, TOP + 2, PCT_W + TEMP_W + TGT_W, font=1, fg=t.DIM,
                             value=values_row("Pwr", "Temp", "Tgt"))
         self.graph: Graph | None = None
-        self.position = Text("db.pos", 8, 0, 32, font=1, fg=t.DIM)
-        self.hint = Text("db.hint", 0, 452, 34, font=1, fg=t.DIM, align="center")
+        self.position = Text("db.pos", 0, 0, p.WIDTH // 8, font=1, fg=t.DIM, align="center")
 
     @property
     def scroll_slots(self) -> int:
@@ -89,9 +88,9 @@ class DashboardScreen(HeaderScreen):
         y += 8
         colors = {n: series_colors(n) for n in heaters}
         self.graph = Graph("db.graph", (0, y, p.WIDTH - 9, GRAPH_BOTTOM), self.app.history, colors)
-        self.position.y = GRAPH_BOTTOM + 6
+        self.position.y = GRAPH_BOTTOM + 12
         widgets: list[Widget] = [self.columns] + [w for slot in self.slots for w in slot]
-        self.widgets = self._base + widgets + [self.scrollbar, self.graph, self.position, self.hint]
+        self.widgets = self._base + widgets + [self.scrollbar, self.graph, self.position]
         self._layout_for = sensors
         self.app.redraw()
 
@@ -133,11 +132,10 @@ class DashboardScreen(HeaderScreen):
             self.scrollbar.total = len(self.rest)
             self.scrollbar.visible = self.scroll_slots
             self.scrollbar.top = self.scroll
-        scrollable = len(self.rest) > self.scroll_slots
-        self.hint.value = "turn: scroll  press: menu" if scrollable else "press: menu"
 
         if "xyz" in pr.homed_axes:
-            self.position.value = f"X{pr.position(0):6.1f}  Y{pr.position(1):6.1f}  Z{pr.position(2):6.2f}"
+            # Same fixed width for every axis, room for -999.99, so nothing shifts.
+            self.position.value = "  ".join(f"{axis}{pr.position(i):7.2f}" for i, axis in enumerate("XYZ"))
         else:
             homed = pr.homed_axes.upper()
             self.position.value = f"Homed: {homed}" if homed else "Not homed"
