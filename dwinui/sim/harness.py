@@ -11,14 +11,17 @@ from ..printer import Printer
 from ..ui.app import App
 from .fake_moonraker import FakeMoonraker
 from .link import SimLink
+from .renderer import Canvas
+
+BUILT_ASSETS = Path(__file__).resolve().parents[2] / "build" / "DWIN_SET"
 
 
 class Harness:
-    def __init__(self, cfg: Config | None = None) -> None:
+    def __init__(self, cfg: Config | None = None, assets: Path | None = None) -> None:
         self.cfg = cfg or Config(long_press_ms=150, dim_timeout=0)
         self.printer = Printer()
         self.api = FakeMoonraker(self.printer)
-        self.link = SimLink()
+        self.link = SimLink(Canvas(assets))
         self.app = App(self.cfg, self.link, self.api, self.printer)
         self._tasks: list[asyncio.Task] = []
 
@@ -57,7 +60,9 @@ class Harness:
 
 async def tour(outdir: Path) -> None:
     outdir.mkdir(parents=True, exist_ok=True)
-    async with Harness() as h:
+    custom = BUILT_ASSETS.exists()
+    cfg = Config(long_press_ms=150, dim_timeout=0, custom_assets=custom)
+    async with Harness(cfg, BUILT_ASSETS if custom else None) as h:
         h.shot(outdir / "01_status_idle.png")
         await h.click()
         h.shot(outdir / "02_menu.png")
@@ -108,7 +113,8 @@ async def tour(outdir: Path) -> None:
         h.app.toast("Must home axis first: 0.000 0.000 0.000 [0.000]", "error")
         await h.settle(0.2)
         h.shot(outdir / "12_toast.png")
-    print(f"bytes sent: {h.link.bytes_written}, unknown cmds: {h.link.canvas.unknown}")
+    print(f"assets: {'custom' if custom else 'stock'}, bytes sent: {h.link.bytes_written}, "
+          f"unknown cmds: {h.link.canvas.unknown}")
 
 
 if __name__ == "__main__":

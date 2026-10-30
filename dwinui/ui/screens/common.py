@@ -22,7 +22,7 @@ def heater_item(screen, heater: str) -> Item:
 
     def value() -> str:
         cur, target = screen.printer.temp(heater)
-        return f"{cur:.0f}/{target:.0f}"
+        return f"{cur:.0f}/{target:.0f}°"
 
     def commit(v: float) -> None:
         set_target(screen, heater, v)

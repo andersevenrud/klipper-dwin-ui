@@ -10,6 +10,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 
 from .. import protocol as p
+from ..assets import IconRef
 from ..display import Rect
 from . import theme as t
 
@@ -60,6 +61,19 @@ class Box(Widget):
         yield self.key, self.area, [p.rect(self.mode, self.color, *self.area)]
 
 
+class Icon(Widget):
+    """Icon from the flashed library; draws nothing without custom assets."""
+
+    def __init__(self, key: str, x: int, y: int, ref: IconRef | None) -> None:
+        self.key, self.x, self.y, self.ref = key, x, y, ref
+
+    def parts(self) -> Iterator[Part]:
+        if self.ref:
+            r = self.ref
+            yield self.key, (self.x, self.y, self.x + r.w - 1, self.y + r.h - 1), [
+                p.icon(r.lib, r.id, self.x, self.y)]
+
+
 class Text(Widget):
     """Fixed-width text field; padding to `chars` erases the previous value."""
 
@@ -101,6 +115,8 @@ class Tile(Widget):
         self.sub = ""
         self.selected = False
         self.enabled = True
+        self.icon: IconRef | None = None       # baked on TILE_BG
+        self.icon_sel: IconRef | None = None   # baked on ACCENT
 
     def parts(self) -> Iterator[Part]:
         x1, y1, x2, y2 = self.area
@@ -108,7 +124,21 @@ class Tile(Widget):
         fg = t.FG if self.enabled else t.DISABLED
         w, h = x2 - x1 + 1, y2 - y1 + 1
         frames = [p.fill(bg, *self.area)]
-        if self.label:
+        icon = self.icon_sel if self.selected else self.icon
+        if icon and self.label:
+            cw, ch = p.FONTS[2]
+            scw, sch = p.FONTS[1]
+            block = icon.h + 4 + ch + (2 + sch if self.sub else 0)
+            iy = y1 + (h - block) // 2
+            frames.append(p.icon(icon.lib, icon.id, x1 + (w - icon.w) // 2, iy))
+            label = self.label[:w // cw]
+            ly = iy + icon.h + 4
+            frames.append(p.text(x1 + (w - len(label) * cw) // 2, ly, label, 2, fg, bg))
+            if self.sub:
+                sub = self.sub[:w // scw]
+                frames.append(p.text(x1 + (w - len(sub) * scw) // 2, ly + ch + 2, sub, 1,
+                                     t.FG if self.selected else t.DIM, bg))
+        elif self.label:
             cw, ch = p.FONTS[3]
             chars = w // cw
             label = self.label[:chars]

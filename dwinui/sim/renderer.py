@@ -1,8 +1,15 @@
-"""Decode DWIN frames and render them to a PIL image."""
+"""Decode DWIN frames and render them to a PIL image.
+
+With an asset directory (a built DWIN_SET), text is drawn from the real
+0T5UIC1.HZK bitmaps and icons from the real .ICO files, so screenshots match
+the panel pixel for pixel. Without one, a system monospace font stands in.
+"""
 
 from __future__ import annotations
 
+import io
 import logging
+import re
 import struct
 from pathlib import Path
 
@@ -28,10 +35,33 @@ def _load_font(height: int) -> ImageFont.ImageFont | ImageFont.FreeTypeFont:
     return ImageFont.load_default(size)
 
 
+def load_hzk(path: Path) -> dict[int, tuple[int, bytes]]:
+    """font id -> (offset, data) over the ASCII tables of a T5UIC1 font file."""
+    data = path.read_bytes()
+    tables, offset = {}, 0
+    for font, (w, h) in sorted(p.FONTS.items()):
+        size = 128 * h * ((w + 7) // 8)
+        tables[font] = (offset, data)
+        offset += size
+    return tables
+
+
+def load_ico(path: Path) -> list[tuple[int, int, bytes]]:
+    data = path.read_bytes()
+    icons = []
+    for i in range(256):
+        w, h, off, l3, l21 = struct.unpack(">HHLBH", data[i * 16:i * 16 + 11])
+        length = (l3 << 16) | l21
+        if not length:
+            break
+        icons.append((w, h, data[off:off + length]))
+    return icons
+
+
 class Canvas:
     """Panel model: a drawing buffer that becomes visible on 0x3D update."""
 
-    def __init__(self) -> None:
+    def __init__(self, assets: Path | None = None) -> None:
         self.buffer = Image.new("RGB", (p.WIDTH, p.HEIGHT), (0, 0, 0))
         self.screen = self.buffer.copy()
         self._draw = ImageDraw.Draw(self.buffer)
@@ -41,6 +71,21 @@ class Canvas:
         self.frames_seen = 0
         self.updates = 0
         self.unknown: list[int] = []
+        self.hzk: dict[int, tuple[int, bytes]] | None = None
+        self.icons: dict[int, list[tuple[int, int, bytes]]] = {}
+        self.jpgs: dict[int, Path] = {}
+        if assets:
+            self.load_assets(assets)
+
+    def load_assets(self, folder: Path) -> None:
+        for path in folder.iterdir():
+            m = re.match(r"(\d+)", path.name)
+            if path.name.upper() == "0T5UIC1.HZK":
+                self.hzk = load_hzk(path)
+            elif m and path.suffix.upper() == ".ICO":
+                self.icons[int(m.group(1))] = load_ico(path)
+            elif m and path.suffix.lower() == ".jpg":
+                self.jpgs[int(m.group(1))] = path
 
     def feed(self, data: bytes) -> None:
         for payload in self._parser.feed(data):
@@ -86,10 +131,15 @@ class Canvas:
                 self.unknown.append(cmd)
                 return
             cw, ch = p.FONTS[size]
-            font = self.font(size)
             if flags & 0x40:
                 d.rectangle((x, y, x + cw * len(text) - 1, y + ch - 1), fill=color(bg))
-            for i, char in enumerate(text):
+            if self.hzk:
+                self._hzk_text(x, y, args[9:], size, color(fg))
+                return
+            font = self.font(size)
+            reverse = {v: k for k, v in p._glyphs.items()}
+            for i, code in enumerate(args[9:]):
+                char = reverse.get(code, chr(code))
                 if char != " ":
                     d.text((x + i * cw + cw / 2, y + ch / 2), char, fill=color(fg), font=font, anchor="mm")
         elif cmd == 0x30:
@@ -97,13 +147,47 @@ class Canvas:
         elif cmd == 0x3D:
             self.updates += 1
             self.screen = self.buffer.copy()
-        elif cmd in (0x22, 0x23):
-            # No ICL/JPG assets in the simulator: draw a placeholder.
-            if cmd == 0x23:
-                x, y = struct.unpack(">HH", args[:4])
+        elif cmd == 0x22:
+            path = self.jpgs.get(args[1])
+            if path:
+                # Stored landscape, turned 90 degrees CCW; undo that for portrait.
+                self.buffer.paste(Image.open(path).convert("RGB").rotate(-90, expand=True), (0, 0))
+        elif cmd == 0x23:
+            x, y, flags, icon_id = struct.unpack(">HHBB", args[:6])
+            library = self.icons.get(flags & 0x0F, [])
+            if icon_id < len(library):
+                _, _, blob = library[icon_id]
+                img = Image.open(io.BytesIO(blob)).convert("RGB")
+                if flags & 0x80:
+                    self.buffer.paste(img, (x, y))
+                else:
+                    # IBD=0: black is transparent (BFI widens it to near-black).
+                    limit = 24 if flags & 0x20 else 4
+                    mask = img.convert("L").point(lambda v: 255 if v > limit else 0)
+                    self.buffer.paste(img, (x, y), mask)
+            else:
                 d.rectangle((x, y, x + 15, y + 15), outline=(255, 0, 255))
         else:
             self.unknown.append(cmd)
+
+    def _hzk_text(self, x: int, y: int, data: bytes, size: int, fg: tuple[int, int, int]) -> None:
+        offset, font = self.hzk[size]
+        w, h = p.FONTS[size]
+        stride = (w + 7) // 8
+        px = self.buffer.load()
+        for i, code in enumerate(data):
+            if code >= 0x80:
+                continue          # GB2312 is not modelled
+            base = offset + code * h * stride
+            for row in range(h):
+                bits = int.from_bytes(font[base + row * stride:base + (row + 1) * stride], "big")
+                if not bits:
+                    continue
+                for col in range(w):
+                    if bits >> (stride * 8 - 1 - col) & 1:
+                        X, Y = x + i * w + col, y + row
+                        if X < p.WIDTH and Y < p.HEIGHT:
+                            px[X, Y] = fg
 
     def snapshot(self, scale: int = 1) -> Image.Image:
         img = self.screen

@@ -105,9 +105,32 @@ def fill(color: int, x1: int, y1: int, x2: int, y2: int) -> bytes:
     return rect(RECT_FILL, color, x1, y1, x2, y2)
 
 
+# Symbols the UI uses. A custom font (tools/build_assets.py) stores them in
+# control-code slots; with the stock font they fall back to one ASCII char,
+# so fixed-width fields keep their length either way.
+FALLBACK = {
+    "°": " ", "←": "<", "→": ">", "↑": "^", "↓": "v", "…": "~", "•": "*", "±": "~",
+    "×": "x", "▲": "^", "▼": "v", "▶": ">", "◀": "<", "✓": "*", "µ": "u",
+}
+_glyphs: dict[str, int] = {}
+
+
+def set_glyphs(mapping: dict[str, int]) -> None:
+    """Use the custom font's symbol slots (char -> byte)."""
+    _glyphs.clear()
+    _glyphs.update(mapping)
+
+
 def encode_text(s: str) -> bytes:
-    # The stock fonts are ASCII + GB2312; keep to printable ASCII.
-    return bytes(c if 0x20 <= c < 0x7F else 0x3F for c in s.encode("ascii", "replace"))
+    out = bytearray()
+    for ch in s:
+        if ch in _glyphs:
+            out.append(_glyphs[ch])
+            continue
+        ch = FALLBACK.get(ch, ch)
+        code = ord(ch)
+        out.append(code if 0x20 <= code < 0x7F else 0x3F)
+    return bytes(out)
 
 
 def text(x: int, y: int, s: str, font: int = 2, fg: int = 0xFFFF, bg: int = 0x0000,
@@ -128,7 +151,7 @@ def jpg(image_id: int) -> bytes:
 
 
 def icon(lib: int, icon_id: int, x: int, y: int, flags: int = 0x80) -> bytes:
-    """Show an icon from an ICL library. flags 0x80 = IBD, as Creality's UI uses."""
+    """Show icon_id from the .ICO library in bank lib. flags 0x80 = IBD (draw the baked background)."""
     return frame(struct.pack(">BHHBB", 0x23, _clamp_x(x), _clamp_y(y), flags | (lib & 0x1F), icon_id))
 
 

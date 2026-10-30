@@ -8,7 +8,7 @@ import time
 from ... import protocol as p
 from .. import theme as t
 from ..screen import HeaderScreen
-from ..widgets import Bar, Text
+from ..widgets import Bar, Icon, Text
 from .common import fmt_duration
 
 STATE_LABELS = {
@@ -32,8 +32,14 @@ class StatusScreen(HeaderScreen):
         self._metadata: dict = {}
         self._metadata_for: str | None = None
 
+        labels = []
+
         def label(key, x, y, s):
-            return Text(f"st.{key}.l", x, y, 12, font=1, fg=t.DIM, value=s)
+            ref = app.assets.icon("small", key)
+            if ref:
+                labels.append(Icon(f"st.{key}.i", x, y - 2, ref))
+                x += ref.w + 4
+            labels.append(Text(f"st.{key}.l", x, y, len(s), font=1, fg=t.DIM, value=s))
 
         self.filename = Text("st.file", 8, 46, 32, font=1)
         self.message = Text("st.msg", 8, 66, 32, font=1, fg=t.DIM)
@@ -52,12 +58,17 @@ class StatusScreen(HeaderScreen):
         self.finish = Text("st.finish", 8, 412, 22, font=2, fg=t.DIM)
         self.hint = Text("st.hint", 0, 452, 34, font=1, fg=t.DIM, align="center",
                          value="press: menu")
-        self.widgets += [
-            label("he", 8, 92, "Hotend"), label("bed", COL2, 92, "Bed"),
-            label("sp", 8, 156, "Speed"), label("fl", 96, 156, "Flow"), label("fan", COL3, 156, "Fan"),
-            label("z", 8, 218, "Z"), label("off", 96, 218, "Z offset"),
-            label("fil", COL3, 218, "Filament"),
-            label("el", 8, 342, "Elapsed"), label("rem", COL2, 342, "Remaining"),
+        label("hotend", 8, 92, "Hotend")
+        label("bed", COL2, 92, "Bed")
+        label("speed", 8, 156, "Speed")
+        label("flow", 96, 156, "Flow")
+        label("fan", COL3, 156, "Fan")
+        label("z", 8, 218, "Z")
+        label("offset", 96, 218, "Offset")
+        label("filament", COL3, 218, "Filament")
+        label("elapsed", 8, 342, "Elapsed")
+        label("remaining", COL2, 342, "Remaining")
+        self.widgets += labels + [
             self.filename, self.message, self.hotend, self.bed, self.speed, self.flow, self.fan,
             self.z, self.offset, self.filament, self.bar, self.percent, self.elapsed,
             self.remaining, self.finish, self.hint,
@@ -81,7 +92,7 @@ class StatusScreen(HeaderScreen):
 
         for widget, heater in ((self.hotend, "extruder"), (self.bed, "heater_bed")):
             cur, target = pr.temp(heater)
-            widget.value = f"{cur:.0f}/{target:.0f}"
+            widget.value = f"{cur:.0f}/{target:.0f}°"
             widget.fg = t.HOT if target > 0 else t.FG
         self.speed.value = f"{pr.get('gcode_move', 'speed_factor', 1.0) * 100:.0f}%"
         self.flow.value = f"{pr.get('gcode_move', 'extrude_factor', 1.0) * 100:.0f}%"

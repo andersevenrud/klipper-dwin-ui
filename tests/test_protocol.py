@@ -38,8 +38,16 @@ def test_text_clipped_to_right_edge():
     assert frame[11:-4] == b"ab"
 
 
-def test_text_non_ascii_replaced():
-    assert p.encode_text("200°C") == b"200?C"
+def test_symbols_keep_field_width():
+    try:
+        assert p.encode_text("200°C ←") == b"200 C <"       # stock font fallbacks
+        assert p.encode_text("ü") == b"?"
+        p.set_glyphs({"°": 0x01, "←": 0x02})
+        assert p.encode_text("200°C ←") == b"200\x01C \x02"  # custom font slots
+    finally:
+        p.set_glyphs({})
+    for ch in p.FALLBACK:
+        assert len(p.encode_text(ch)) == 1
 
 
 def test_images():

@@ -27,6 +27,7 @@ class Config:
     invert_encoder: bool = False
     beep_on_click: bool = False
     beep_ms: int = 20
+    custom_assets: bool = False        # True once build/DWIN_SET is flashed
     # [moonraker]
     url: str = "ws://localhost:7125/websocket"
     api_key: str | None = None
@@ -75,6 +76,7 @@ def load(path: str | Path | None) -> Config:
         "port": str, "baud": int, "backend": str, "brightness": int,
         "dim_brightness": int, "dim_timeout": float, "long_press_ms": int,
         "invert_encoder": bool, "beep_on_click": bool, "beep_ms": int,
+        "custom_assets": bool,
     })
     section("moonraker", {"url": str, "api_key": str})
     section("ui", {

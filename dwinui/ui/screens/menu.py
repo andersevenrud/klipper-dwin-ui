@@ -19,6 +19,7 @@ class Entry:
     label: str
     action: Callable[[], None]
     sub: Callable[[], str] | None = None
+    icon: str = ""
 
 
 class MenuScreen(HeaderScreen):
@@ -56,34 +57,35 @@ class MenuScreen(HeaderScreen):
             return f"{e:.0f}/{et:.0f} {b:.0f}/{bt:.0f}"
 
         tune = Entry("Tune", go(TuneScreen),
-                     lambda: f"{pr.get('gcode_move', 'speed_factor', 1.0) * 100:.0f}% speed")
-        temp = Entry("Temp", go(TemperatureScreen), temps)
+                     lambda: f"{pr.get('gcode_move', 'speed_factor', 1.0) * 100:.0f}% speed", "tune")
+        temp = Entry("Temp", go(TemperatureScreen), temps, "temp")
         if pr.job_active:
             # Paused is when you'd swap filament; printing is when you'd nudge the head.
             if pr.job_state == "paused":
-                pause = Entry("Resume", lambda: self.api.fire("printer.print.resume"))
-                tool = Entry("Extrude", go(ExtrudeScreen))
+                pause = Entry("Resume", lambda: self.api.fire("printer.print.resume"), icon="resume")
+                tool = Entry("Extrude", go(ExtrudeScreen), icon="extrude")
             else:
-                pause = Entry("Pause", lambda: self.api.fire("printer.print.pause"))
-                tool = Entry("Move", go(MoveScreen))
+                pause = Entry("Pause", lambda: self.api.fire("printer.print.pause"), icon="pause")
+                tool = Entry("Move", go(MoveScreen), icon="move")
             return [
                 pause,
-                Entry("Cancel", self._cancel),
+                Entry("Cancel", self._cancel, icon="cancel"),
                 tune, temp,
-                Entry("Macros", go(MacrosScreen)),
+                Entry("Macros", go(MacrosScreen), icon="macros"),
                 tool,
-                Entry("System", go(SystemScreen)),
-                Entry("Back", self.app.pop),
+                Entry("System", go(SystemScreen), icon="system"),
+                Entry("Back", self.app.pop, icon="back"),
             ]
         return [
-            Entry("Files", go(FilesScreen)),
+            Entry("Files", go(FilesScreen), icon="files"),
             temp,
-            Entry("Move", go(MoveScreen), lambda: pr.homed_axes.upper() and f"homed {pr.homed_axes.upper()}"),
-            Entry("Extrude", go(ExtrudeScreen)),
+            Entry("Move", go(MoveScreen), lambda: pr.homed_axes.upper() and f"homed {pr.homed_axes.upper()}",
+                  "move"),
+            Entry("Extrude", go(ExtrudeScreen), icon="extrude"),
             tune,
-            Entry("Macros", go(MacrosScreen)),
-            Entry("System", go(SystemScreen)),
-            Entry("Back", self.app.pop),
+            Entry("Macros", go(MacrosScreen), icon="macros"),
+            Entry("System", go(SystemScreen), icon="system"),
+            Entry("Back", self.app.pop, icon="back"),
         ]
 
     def _cancel(self) -> None:
@@ -102,6 +104,9 @@ class MenuScreen(HeaderScreen):
             tile.label = entry.label if entry else ""
             tile.sub = (entry.sub() or "") if entry and entry.sub else ""
             tile.selected = i == self.selected
+            name = entry.icon if entry else ""
+            tile.icon = self.app.assets.icon("tile", name)
+            tile.icon_sel = self.app.assets.icon("tile_sel", name)
 
     def on_rotate(self, delta: int) -> None:
         self.selected = max(0, min(len(self.entries) - 1, self.selected + delta))

@@ -82,7 +82,7 @@ class NumberEdit:
         self.pending = max(self.lo, min(self.hi, self.pending + delta * mult * self.step))
 
     def text(self) -> str:
-        return "> " + self.fmt.format(self.pending)
+        return "▶ " + self.fmt.format(self.pending)
 
     def finish(self) -> None:
         self.commit(self.pending)
@@ -100,7 +100,7 @@ class Adjust:
         self.on_delta(delta)
 
     def text(self) -> str:
-        return "<> " + self._text()
+        return "◀▶ " + self._text()
 
     def finish(self) -> None: ...
 
@@ -130,7 +130,7 @@ class ListScreen(HeaderScreen):
         self.set_items(items or [])
 
     def set_items(self, items: list[Item]) -> None:
-        head = [Item("< Back", action=self.app.pop)] if self.back_row else []
+        head = [Item("← Back", action=self.app.pop)] if self.back_row else []
         self.items = head + items
         if not self._moved:
             # Start on the first real entry; Back is one step up.

@@ -1,0 +1,182 @@
+{
+ "icon_lib": 3,
+ "icons": {
+  "tile/files": [
+   0,
+   40,
+   40
+  ],
+  "tile/temp": [
+   1,
+   40,
+   40
+  ],
+  "tile/move": [
+   2,
+   40,
+   40
+  ],
+  "tile/extrude": [
+   3,
+   40,
+   40
+  ],
+  "tile/tune": [
+   4,
+   40,
+   40
+  ],
+  "tile/macros": [
+   5,
+   40,
+   40
+  ],
+  "tile/system": [
+   6,
+   40,
+   40
+  ],
+  "tile/back": [
+   7,
+   40,
+   40
+  ],
+  "tile/pause": [
+   8,
+   40,
+   40
+  ],
+  "tile/resume": [
+   9,
+   40,
+   40
+  ],
+  "tile/cancel": [
+   10,
+   40,
+   40
+  ],
+  "tile_sel/files": [
+   11,
+   40,
+   40
+  ],
+  "tile_sel/temp": [
+   12,
+   40,
+   40
+  ],
+  "tile_sel/move": [
+   13,
+   40,
+   40
+  ],
+  "tile_sel/extrude": [
+   14,
+   40,
+   40
+  ],
+  "tile_sel/tune": [
+   15,
+   40,
+   40
+  ],
+  "tile_sel/macros": [
+   16,
+   40,
+   40
+  ],
+  "tile_sel/system": [
+   17,
+   40,
+   40
+  ],
+  "tile_sel/back": [
+   18,
+   40,
+   40
+  ],
+  "tile_sel/pause": [
+   19,
+   40,
+   40
+  ],
+  "tile_sel/resume": [
+   20,
+   40,
+   40
+  ],
+  "tile_sel/cancel": [
+   21,
+   40,
+   40
+  ],
+  "small/hotend": [
+   22,
+   16,
+   16
+  ],
+  "small/bed": [
+   23,
+   16,
+   16
+  ],
+  "small/speed": [
+   24,
+   16,
+   16
+  ],
+  "small/flow": [
+   25,
+   16,
+   16
+  ],
+  "small/fan": [
+   26,
+   16,
+   16
+  ],
+  "small/z": [
+   27,
+   16,
+   16
+  ],
+  "small/offset": [
+   28,
+   16,
+   16
+  ],
+  "small/filament": [
+   29,
+   16,
+   16
+  ],
+  "small/elapsed": [
+   30,
+   16,
+   16
+  ],
+  "small/remaining": [
+   31,
+   16,
+   16
+  ]
+ },
+ "glyphs": {
+  "°": 1,
+  "←": 2,
+  "→": 3,
+  "↑": 4,
+  "↓": 5,
+  "…": 6,
+  "•": 7,
+  "±": 14,
+  "×": 15,
+  "▲": 16,
+  "▼": 17,
+  "▶": 18,
+  "◀": 19,
+  "✓": 20,
+  "µ": 21
+ }
+}

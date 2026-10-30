@@ -7,6 +7,7 @@ import logging
 import time
 
 from .. import protocol as p
+from ..assets import Assets
 from ..config import Config
 from ..display import Display, intersects
 from ..link import Link
@@ -28,6 +29,8 @@ class App:
         self.link = link
         self.api = api
         self.printer = printer
+        self.assets = Assets.load() if cfg.custom_assets else Assets()
+        p.set_glyphs(self.assets.glyphs)
         self.display = Display(link, t.BG)
         self.stack: list[Screen] = [StatusScreen(self)]
         self.blocker: Screen | None = None

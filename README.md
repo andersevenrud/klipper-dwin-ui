@@ -200,5 +200,55 @@ and `src/lcd/dwin/creality/dwin_lcd.cpp`:
 
 All frames end with `CC 33 C3 3C`. Words are big-endian and colours RGB565.
 Fonts 0–9 run from 6×12 to 32×64, but **TJC clone panels only have fonts
-1–5**, so the UI uses those. Icons from the stock `9.ICL` are supported by
-`protocol.icon()` but not used yet; the UI draws only rectangles and text.
+1–5**, so the UI uses those.
+
+## Custom asset pack (font, icons, splash)
+
+`tools/build_assets.py` builds a `DWIN_SET` folder for the display's microSD
+slot:
+
+| File | Bank | Contents |
+|---|---|---|
+| `0T5UIC1.HZK` | font memory | [Terminus](https://terminus-font.sourceforge.net/) Bold (OFL) in all 10 sizes, plus symbols (`° ← → ↑ ↓ … • ± × ▲ ▼ ▶ ◀ ✓ µ`) in unused control-code slots |
+| `0_start.jpg` | 0 | boot splash: the Klipper logo |
+| `3.ICO` | 3–4 | [Tabler Icons](https://tabler.io/icons) (MIT), already drawn on the UI's tile and background colours |
+
+Banks 1–2 (the stock language images) and 9–15 (the stock `9.ICO`) are left
+alone, so stock firmware keeps working.
+
+```sh
+.venv/bin/python tools/build_assets.py    # -> build/DWIN_SET, build/preview, dwinui/assets.json
+```
+
+The script downloads its sources once into `.cache/` and checks their
+SHA-256. It also regenerates `dwinui/assets.json`, which tells the UI the
+icon IDs and symbol slots, so commit that file along with any asset change.
+
+**Format notes:**
+- The font file holds ten 1-bit tables of 128 ASCII glyphs. Rows run top to
+  bottom, padded to whole bytes, with the most significant bit as the
+  leftmost pixel. Bytes 0x80 and up are read as GB2312, so there is no
+  Latin-1.
+- An `.ICO` is a 4 KB directory of 256 × 16-byte big-endian entries (width,
+  height, offset, 24-bit length), followed by baseline JPEGs.
+- The library ID in `0x23` and the image ID in `0x22` are both the 32 KB
+  bank number.
+- Splash JPEGs are stored landscape (480×272), with the portrait content
+  rotated 90° counter-clockwise.
+
+**Flashing:**
+1. Use an SD card formatted as MBR, FAT32 with 4 KB clusters, ideally a
+   single partition of 8 GB or less.
+2. Copy `build/DWIN_SET` to the card root, and put nothing else on the card.
+3. With the display unpowered, insert the card, then power up. The screen
+   turns blue while flashing and orange when done.
+4. Power off, remove the card, then set `custom_assets: true` in
+   `dwinui.conf`.
+
+To go back, flash the
+[stock set](https://github.com/mriscoc/Ender3V2S1/tree/Ender3V2S1-Bugfix/display%20assets/stock).
+
+To preview with the real assets, run
+`dwinui --sim --fake --custom-assets`. The simulator then draws text and
+icons from the built `.HZK` and `.ICO`, so the preview matches the panel
+pixel for pixel.
