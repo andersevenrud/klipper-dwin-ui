@@ -38,6 +38,16 @@ def test_serial_link_over_pty():
             await link.beep(50)
             await asyncio.sleep(0.1)
             assert p.bridge_beep(50) in received
+            # Far bigger than the OS buffer: must arrive whole and in order
+            # (serial_asyncio_fast spun forever on this).
+            big = b"".join(p.text(0, i % 400, f"line {i:05d}", 1) for i in range(800))
+            received.clear()
+            await asyncio.wait_for(link.write(big), 5)
+            for _ in range(50):
+                if len(received) >= len(big):
+                    break
+                await asyncio.sleep(0.05)
+            assert bytes(received) == big
         finally:
             loop.remove_reader(master)
             await link.close()

@@ -5,7 +5,7 @@ description = "KlipperScreen-like UI for the Ender 3 V2 DWIN display, driven ove
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "pyserial-asyncio-fast>=0.14",
+    "pyserial>=3.5",
     "websockets>=13",
 ]
 

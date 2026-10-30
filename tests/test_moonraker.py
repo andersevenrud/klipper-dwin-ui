@@ -88,8 +88,12 @@ def test_full_session_against_websocket_server():
                 elif method == "printer.info":
                     result = {"state": state["klippy"], "state_message": "Starting up"}
                     state["klippy"] = "ready"        # ready on the next poll
+                elif method == "printer.objects.query":
+                    result = {"status": {"heaters": {"available_heaters": ["extruder"],
+                                                     "available_sensors": ["extruder", "temperature_sensor mcu"]}}}
                 elif method == "printer.objects.subscribe":
                     assert "print_stats" in msg["params"]["objects"]
+                    assert "temperature_sensor mcu" in msg["params"]["objects"]
                     result = {"eventtime": 1.0, "status": {
                         "webhooks": {"state": "ready", "state_message": "ok"},
                         "extruder": {"temperature": 25.0, "target": 0.0}}}
@@ -117,3 +121,15 @@ def test_full_session_against_websocket_server():
         assert printer.temp("extruder") == (25.0, 200.0)
         assert not printer.connected and printer.klippy_state == "disconnected"
     asyncio.run(run())
+
+
+def test_sensor_order_and_labels():
+    from dwinui.printer import sensor_label
+    printer = Printer()
+    printer.replace({"heaters": {
+        "available_heaters": ["heater_bed", "extruder"],
+        "available_sensors": ["temperature_sensor cartographer_coil", "heater_bed",
+                              "temperature_sensor Chamber", "temperature_fan Host_MCU",
+                              "temperature_sensor Cartographer_MCU", "extruder"]}})
+    assert [sensor_label(n) for n in printer.sensor_names] == [
+        "Hotend", "Bed", "Cartographer Coil", "Cartographer MCU", "Chamber", "Host MCU"]

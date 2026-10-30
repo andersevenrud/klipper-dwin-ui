@@ -1,4 +1,5 @@
-"""Root screen: print status at a glance. Click opens the menu."""
+"""Print job screen. It replaces the dashboard while a job runs, and stays
+after the job ends (showing Complete/Cancelled) until dismissed with a click."""
 
 from __future__ import annotations
 
@@ -24,8 +25,8 @@ COL2 = 140
 COL3 = 184
 
 
-class StatusScreen(HeaderScreen):
-    title = "Ready"
+class PrintingScreen(HeaderScreen):
+    title = "Printing"
 
     def __init__(self, app) -> None:
         super().__init__(app)
@@ -56,8 +57,7 @@ class StatusScreen(HeaderScreen):
         self.elapsed = Text("st.elapsed", 8, 360, 10, font=3)
         self.remaining = Text("st.remaining", COL2, 360, 10, font=3)
         self.finish = Text("st.finish", 8, 412, 22, font=2, fg=t.DIM)
-        self.hint = Text("st.hint", 0, 452, 34, font=1, fg=t.DIM, align="center",
-                         value="press: menu")
+        self.hint = Text("st.hint", 0, 452, 34, font=1, fg=t.DIM, align="center")
         label("hotend", 8, 92, "Hotend")
         label("bed", COL2, 92, "Bed")
         label("speed", 8, 156, "Speed")
@@ -114,6 +114,7 @@ class StatusScreen(HeaderScreen):
             self.finish.value = "Done at " + time.strftime("%H:%M", time.localtime(time.time() + remaining))
         else:
             self.finish.value = ""
+        self.hint.value = "press: menu" if pr.job_active else "press: done"
 
     def _remaining(self, progress: float, elapsed: float) -> float | None:
         estimate = self._metadata.get("estimated_time")
@@ -133,6 +134,9 @@ class StatusScreen(HeaderScreen):
             self.app.invalidate()
 
     def on_click(self) -> None:
+        if not self.printer.job_active:
+            self.app.dismiss_job()
+            return
         from .menu import MenuScreen
         self.app.push(MenuScreen(self.app))
 

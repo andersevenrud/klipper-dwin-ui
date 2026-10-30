@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
+from dataclasses import dataclass
 
 from . import protocol as p
 from .link import Link, LinkClosed
@@ -16,6 +18,14 @@ from .link import Link, LinkClosed
 log = logging.getLogger(__name__)
 
 Rect = tuple[int, int, int, int]  # x1, y1, x2, y2 inclusive
+
+
+@dataclass(frozen=True)
+class Lazy:
+    """Frames that are costly to build: the cache compares sig, and build()
+    only runs when the area actually has to be redrawn."""
+    sig: object
+    build: Callable[[], list[bytes]]
 
 
 def intersects(a: Rect, b: Rect) -> bool:
@@ -70,14 +80,25 @@ class Display:
         self._queue = [p.clear(self.background)]
         self._cache.clear()
 
-    def draw(self, key: str, area: Rect, frames: list[bytes]) -> bool:
+    def draw(self, key: str, area: Rect, frames: list[bytes] | Lazy) -> bool:
         """Queue frames for key unless they match what is drawn. Returns True if queued."""
         cached = self._cache.get(key)
+        if isinstance(frames, Lazy):
+            marker = ("lazy", frames.sig)
+            if cached is not None and cached[1] == marker:
+                return False
+            self._cache[key] = (area, marker)
+            self._queue.extend(frames.build())
+            return True
         if cached is not None and cached[1] == frames:
             return False
         self._cache[key] = (area, frames)
         self._queue.extend(frames)
         return True
+
+    def send(self, frames: list[bytes]) -> None:
+        """Queue frames outside the cache (incremental updates such as graph scrolling)."""
+        self._queue.extend(frames)
 
     def forget(self, key: str) -> None:
         self._cache.pop(key, None)

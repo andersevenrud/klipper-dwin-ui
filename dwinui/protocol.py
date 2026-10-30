@@ -105,6 +105,30 @@ def fill(color: int, x1: int, y1: int, x2: int, y2: int) -> bytes:
     return rect(RECT_FILL, color, x1, y1, x2, y2)
 
 
+POINTS_PER_FRAME = 20     # Marlin keeps point frames to about this size
+
+
+def points(color: int, coords: list[tuple[int, int]], size: int = 1) -> bytes:
+    """Draw size x size dots; several coordinates share one 0x02 frame."""
+    out = b""
+    for i in range(0, len(coords), POINTS_PER_FRAME):
+        xy = b"".join(struct.pack(">HH", _clamp_x(x), _clamp_y(y))
+                      for x, y in coords[i:i + POINTS_PER_FRAME])
+        out += frame(struct.pack(">BHBB", 0x02, color, size, size) + xy)
+    return out
+
+
+MOVE_LEFT, MOVE_RIGHT, MOVE_UP, MOVE_DOWN = 0, 1, 2, 3
+
+
+def area_move(direction: int, distance: int, color: int, x1: int, y1: int, x2: int, y2: int,
+              wrap: bool = False) -> bytes:
+    """Shift a screen area (the panel does the work); the gap fills with color."""
+    mode = 0 if wrap else 1
+    return frame(struct.pack(">BBHHHHHH", 0x09, (mode << 7) | direction, distance, color,
+                             _clamp_x(x1), _clamp_y(y1), _clamp_x(x2), _clamp_y(y2)))
+
+
 # Symbols the UI uses. A custom font (tools/build_assets.py) stores them in
 # control-code slots; with the stock font they fall back to one ASCII char,
 # so fixed-width fields keep their length either way.

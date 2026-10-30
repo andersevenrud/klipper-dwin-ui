@@ -4,7 +4,8 @@ from dwinui.config import Config
 from dwinui.sim.harness import Harness
 from dwinui.ui.screens.menu import MenuScreen
 from dwinui.ui.screens.move import MoveScreen
-from dwinui.ui.screens.status import StatusScreen
+from dwinui.ui.screens.dashboard import DashboardScreen
+from dwinui.ui.screens.printing import PrintingScreen
 from dwinui.ui.screens.temperature import TemperatureScreen
 
 
@@ -15,11 +16,11 @@ def run(coro):
 def test_click_opens_menu_and_long_press_goes_back():
     async def go():
         async with Harness() as h:
-            assert isinstance(h.app.top, StatusScreen)
+            assert isinstance(h.app.top, DashboardScreen)
             await h.click()
             assert isinstance(h.app.top, MenuScreen)
             await h.back()
-            assert isinstance(h.app.top, StatusScreen)
+            assert isinstance(h.app.top, DashboardScreen)
     run(go())
 
 
@@ -89,7 +90,7 @@ def test_estop_shows_blocker_and_firmware_restart_recovers():
             await h.click()                       # Firmware restart
             await h.settle(2.0)
             assert h.app.blocker is None
-            assert isinstance(h.app.top, StatusScreen)
+            assert isinstance(h.app.top, DashboardScreen)
     run(go())
 
 
@@ -115,7 +116,7 @@ def test_print_start_from_files():
             await h.click()
             await h.settle(0.3)
             assert h.printer.job_state == "printing"
-            assert isinstance(h.app.top, StatusScreen)
+            assert isinstance(h.app.top, PrintingScreen)
     run(go())
 
 
@@ -128,5 +129,5 @@ def test_dimming_and_wake_swallows_input():
             await h.click()                       # wakes only
             await h.settle(0.1)
             assert not h.app.dimmed and h.link.canvas.brightness == 255
-            assert isinstance(h.app.top, StatusScreen)
+            assert isinstance(h.app.top, DashboardScreen)
     run(go())

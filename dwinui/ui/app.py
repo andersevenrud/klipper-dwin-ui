@@ -10,6 +10,7 @@ from .. import protocol as p
 from ..assets import Assets
 from ..config import Config
 from ..display import Display, intersects
+from ..history import TempHistory
 from ..link import Link
 from ..printer import Printer
 from . import theme as t
@@ -23,7 +24,7 @@ TOAST_COLORS = {"info": t.HEADER_BG, "ok": t.OK, "error": t.ERROR}
 
 class App:
     def __init__(self, cfg: Config, link: Link, api, printer: Printer) -> None:
-        from .screens.status import StatusScreen
+        from .screens.dashboard import DashboardScreen
 
         self.cfg = cfg
         self.link = link
@@ -32,7 +33,11 @@ class App:
         self.assets = Assets.load() if cfg.custom_assets else Assets()
         p.set_glyphs(self.assets.glyphs)
         self.display = Display(link, t.BG)
-        self.stack: list[Screen] = [StatusScreen(self)]
+        self.history = TempHistory()
+        self.stack: list[Screen] = [DashboardScreen(self)]
+        self._job_was_active = False
+        self._job_seen = False          # a job ran while we watched
+        self._job_dismissed = False
         self.blocker: Screen | None = None
         self._wake = asyncio.Event()
         self._full = True
@@ -89,6 +94,40 @@ class App:
             self._toast_drawn = False
         else:
             self._full = True
+
+    def redraw(self) -> None:
+        """Clear and redraw everything on the next render."""
+        self._full = True
+        self.invalidate()
+
+    def _sync_root(self) -> None:
+        """Dashboard normally; the printing screen while a job runs and after
+        it ends, until dismissed."""
+        from .screens.dashboard import DashboardScreen
+        from .screens.printing import PrintingScreen
+
+        pr = self.printer
+        active = pr.job_active
+        if active and not self._job_was_active:
+            self._job_seen = True
+            self._job_dismissed = False
+            self.pop_to_root()          # a new job: show it, wherever it was started from
+        self._job_was_active = active
+        finished = pr.job_state in ("complete", "cancelled", "error")
+        want = PrintingScreen if active or (self._job_seen and finished and not self._job_dismissed) \
+            else DashboardScreen
+        if not isinstance(self.stack[0], want):
+            self.stack[0] = want(self)
+            if len(self.stack) == 1:
+                self._full = True
+
+    def dismiss_job(self) -> None:
+        self._job_dismissed = True
+        self.invalidate()
+
+    async def services(self) -> None:
+        """Background work that outlives display reconnects."""
+        await self.history.run(self.printer, self.api, self.invalidate)
 
     def _sync_blocker(self) -> None:
         from .screens.blocker import BlockerScreen
@@ -163,6 +202,8 @@ class App:
 
     def render(self) -> None:
         self._sync_blocker()
+        if self.printer.ready:
+            self._sync_root()
         now = time.monotonic()
         if self._full:
             self.display.clear(t.BG)
@@ -177,9 +218,14 @@ class App:
         screen.refresh()
         under_toast = False
         for widget in screen.widgets:
+            drew = False
             for key, area, frames in widget.parts():
-                if self.display.draw(key, area, frames) and intersects(area, t.TOAST_RECT):
-                    under_toast = True
+                if self.display.draw(key, area, frames):
+                    drew = True
+                    under_toast = under_toast or intersects(area, t.TOAST_RECT)
+            incremental = getattr(widget, "incremental", None)
+            if incremental:
+                self.display.send(incremental(drew))
 
         if self._toast:
             if under_toast or not self._toast_drawn:

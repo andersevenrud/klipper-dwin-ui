@@ -75,3 +75,11 @@ def test_input_events():
 
 def test_bridge_beep():
     assert p.bridge_beep(300) == bytes.fromhex("aaee10012c") + T
+
+
+def test_points_and_area_move():
+    assert p.points(0xF800, [(1, 2), (3, 4)]) == bytes.fromhex("aa02f80001010001000200030004") + T
+    many = p.points(0, [(i, i) for i in range(45)])
+    assert many.count(T) == 3                      # 20 + 20 + 5 points
+    assert p.area_move(p.MOVE_LEFT, 1, 0x1234, 10, 20, 30, 40) == \
+        bytes.fromhex("aa09800001" "1234" "000a0014001e0028") + T

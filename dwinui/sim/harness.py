@@ -27,7 +27,8 @@ class Harness:
 
     async def __aenter__(self) -> Harness:
         await self.link.open()
-        self._tasks = [asyncio.create_task(self.api.run()), asyncio.create_task(self.app.run())]
+        self._tasks = [asyncio.create_task(c) for c in
+                       (self.api.run(), self.app.run(), self.app.services())]
         await self.settle(0.3)
         return self
 

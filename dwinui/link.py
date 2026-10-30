@@ -17,6 +17,8 @@ from __future__ import annotations
 import asyncio
 import glob
 import logging
+import threading
+from concurrent.futures import ThreadPoolExecutor
 
 from . import protocol as p
 
@@ -62,50 +64,56 @@ def resolve_port(pattern: str) -> str:
 
 
 class SerialLink(Link):
+    """pyserial with a reader thread and a single writer thread.
+
+    (serial_asyncio_fast spins forever in its write callback on macOS once a
+    write exceeds the OS buffer, so plain blocking I/O in threads it is.)
+    """
+
     def __init__(self, port: str, baud: int = 115200, bridge: bool = True) -> None:
         super().__init__()
         self.port = port
         self.baud = baud
         self.bridge = bridge
-        self._reader: asyncio.StreamReader | None = None
-        self._writer: asyncio.StreamWriter | None = None
-        self._task: asyncio.Task | None = None
+        self._serial = None
+        self._writer: ThreadPoolExecutor | None = None
+        self._stop = threading.Event()
 
     async def open(self) -> None:
-        import serial_asyncio_fast
+        import serial
 
         port = resolve_port(self.port)
         log.info("opening %s", port)
         try:
-            self._reader, self._writer = await serial_asyncio_fast.open_serial_connection(
-                url=port, baudrate=self.baud)
-        except OSError as e:
+            self._serial = serial.Serial(port, self.baud, timeout=0.1, write_timeout=5)
+        except (OSError, serial.SerialException) as e:
             raise LinkClosed(str(e)) from e
         self.closed.clear()
-        self._task = asyncio.create_task(self._read_loop())
+        self._stop.clear()
+        self._writer = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dwin-write")
+        loop = asyncio.get_running_loop()
+        threading.Thread(target=self._read_thread, args=(loop, self._serial), name="dwin-read",
+                         daemon=True).start()
 
-    async def _read_loop(self) -> None:
+    def _read_thread(self, loop: asyncio.AbstractEventLoop, ser) -> None:
         parser = p.FrameParser()
-        assert self._reader
         try:
-            while True:
-                data = await self._reader.read(256)
-                if not data:
-                    break
+            while not self._stop.is_set():
+                data = ser.read(ser.in_waiting or 1)
                 for payload in parser.feed(data):
-                    self._dispatch(payload)
-        except (OSError, asyncio.IncompleteReadError) as e:
-            log.warning("serial read failed: %s", e)
+                    loop.call_soon_threadsafe(self._dispatch, payload)
+        except Exception as e:  # noqa: BLE001 - unplugged, closed under us, ...
+            if not self._stop.is_set():
+                log.warning("serial read failed: %s", e)
         finally:
-            self.closed.set()
+            loop.call_soon_threadsafe(self.closed.set)
 
     async def write(self, data: bytes) -> None:
-        if self.closed.is_set() or not self._writer:
+        if self.closed.is_set() or not self._serial or not self._writer:
             raise LinkClosed("link closed")
         try:
-            self._writer.write(data)
-            await self._writer.drain()
-        except OSError as e:
+            await asyncio.get_running_loop().run_in_executor(self._writer, self._serial.write, data)
+        except Exception as e:  # noqa: BLE001 - SerialException, SerialTimeoutException, OSError
             self.closed.set()
             raise LinkClosed(str(e)) from e
         self.bytes_written += len(data)
@@ -115,8 +123,13 @@ class SerialLink(Link):
             await self.write(p.bridge_beep(ms))
 
     async def close(self) -> None:
-        if self._task:
-            self._task.cancel()
+        self._stop.set()
         if self._writer:
-            self._writer.close()
+            self._writer.shutdown(wait=False, cancel_futures=True)
+            self._writer = None
+        if self._serial:
+            try:
+                self._serial.close()
+            except Exception:  # noqa: BLE001
+                pass
         await super().close()

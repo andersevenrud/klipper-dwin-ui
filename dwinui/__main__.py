@@ -54,7 +54,7 @@ async def amain(args: argparse.Namespace) -> None:
         link = SerialLink(cfg.port, cfg.baud, bridge=cfg.backend == "bridge")
 
     app = App(cfg, link, api, printer)
-    tasks.append(display_loop(app, link))
+    tasks += [display_loop(app, link), app.services()]
     await asyncio.gather(*tasks)
 
 

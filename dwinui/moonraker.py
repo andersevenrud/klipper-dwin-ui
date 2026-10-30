@@ -159,8 +159,13 @@ class Moonraker:
             self.printer.replace(res.get("status", {}))
             self.printer.set_state("ready", "")
 
+        # Sensors differ per printer: ask Klipper which exist, then subscribe to all.
+        res = await self.call("printer.objects.query", objects={"heaters": None})
+        heaters = res.get("status", {}).get("heaters", {})
+        sensors = [*heaters.get("available_heaters", []), *heaters.get("available_sensors", [])]
+        names = dict.fromkeys([*SUBSCRIBE_OBJECTS, *sensors])
         await self.call("printer.objects.subscribe", on_result=apply,
-                        objects={name: None for name in SUBSCRIBE_OBJECTS})
+                        objects={name: None for name in names})
         log.info("subscribed to printer objects")
 
     async def _read_loop(self, ws: Any) -> None:

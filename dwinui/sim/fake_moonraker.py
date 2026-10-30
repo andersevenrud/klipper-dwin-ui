@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import re
 import time
 from typing import Any
@@ -19,6 +20,12 @@ FILES = [
     ("voron_cable_chain_x.gcode", 26 * 3600, 5 * 3600 + 2 * 60, 21400.0),
     ("filament_clip.gcode", 900, 9 * 60, 310.0),
 ]
+# Mirrors a real printer's sensor set (klipper-ender).
+SENSORS = {
+    "temperature_sensor Chamber": 21.0, "temperature_sensor Toolhead_MCU": 31.0,
+    "temperature_fan Mainboard_MCU": 29.0, "temperature_sensor cartographer_coil": 24.0,
+    "temperature_sensor Cartographer_MCU": 26.0, "temperature_fan Host_MCU": 36.0,
+}
 MACROS = ["PRINT_START", "PRINT_END", "LOAD_FILAMENT", "UNLOAD_FILAMENT", "BED_MESH_CALIBRATE",
           "_HOMING_VARS", "PARK"]
 
@@ -48,6 +55,11 @@ class FakeMoonraker:
                            "homing_origin": [0.0, 0.0, 0.0, 0.0]},
             "fan": {"speed": 0.0},
             "idle_timeout": {"state": "Idle"},
+            "heaters": {"available_heaters": ["heater_bed", "extruder"],
+                        "available_sensors": ["heater_bed", *SENSORS, "extruder"]},
+            **{name: ({"temperature": temp, "target": 45.0, "speed": 0.3}
+                      if name.startswith("temperature_fan") else {"temperature": temp})
+               for name, temp in SENSORS.items()},
         }
 
     async def run(self) -> None:
@@ -117,6 +129,37 @@ class FakeMoonraker:
                 return {"filename": path, "estimated_time": est, "filament_total": fil,
                         "layer_height": 0.2, "slicer": "OrcaSlicer", "slicer_version": "2.2.0"}
         raise RPCError(f"Metadata not available for <{filename}>", 404)
+
+    async def _m_printer_objects_query(self, objects: dict) -> dict:
+        return {"eventtime": time.monotonic(),
+                "status": {name: dict(self.printer.status.get(name, {})) for name in objects}}
+
+    async def _m_server_temperature_store(self, include_monitors: bool = False) -> dict:
+        """Ten minutes of 1 s samples: a preheat to 210/60 that was turned off again."""
+        n = 600
+
+        def curve(peak: float, rate: float) -> list[float]:
+            out = []
+            for i in range(n):
+                if i < 200:
+                    out.append(22.0)
+                elif i < 450:
+                    out.append(22 + (peak - 22) * (1 - math.exp(-(i - 200) / rate)))
+                else:
+                    out.append(22 + (out[449] - 22) * math.exp(-(i - 450) / (rate * 3)))
+            return [round(v, 2) for v in out]
+
+        def target(value: float) -> list[float]:
+            return [value if 200 <= i < 450 else 0.0 for i in range(n)]
+
+        store = {"extruder": {"temperatures": curve(210, 25), "targets": target(210),
+                              "powers": [0.0] * n},
+                 "heater_bed": {"temperatures": curve(60, 70), "targets": target(60),
+                                "powers": [0.0] * n}}
+        # The live values carry on from where the history ends.
+        self.printer.update({"extruder": {"temperature": store["extruder"]["temperatures"][-1]},
+                             "heater_bed": {"temperature": store["heater_bed"]["temperatures"][-1]}})
+        return store
 
     async def _m_printer_objects_list(self) -> dict:
         return {"objects": ["webhooks", "extruder", "heater_bed"] +

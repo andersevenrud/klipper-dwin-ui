@@ -108,6 +108,14 @@ class Canvas:
         elif cmd == 0x01:
             (c,) = struct.unpack(">H", args[:2])
             d.rectangle((0, 0, p.WIDTH, p.HEIGHT), fill=color(c))
+        elif cmd == 0x02:
+            c, w, h = struct.unpack(">HBB", args[:4])
+            for i in range(4, len(args) - 3, 4):
+                x, y = struct.unpack(">HH", args[i:i + 4])
+                d.rectangle((x, y, x + w - 1, y + h - 1), fill=color(c))
+        elif cmd == 0x09:
+            mode_dir, dist, c, x1, y1, x2, y2 = struct.unpack(">BHHHHHH", args[:13])
+            self._area_move(mode_dir >> 7, mode_dir & 0x0F, dist, color(c), x1, y1, x2, y2)
         elif cmd == 0x03:
             c, x1, y1, x2, y2 = struct.unpack(">HHHHH", args[:10])
             d.line((x1, y1, x2, y2), fill=color(c))
@@ -169,6 +177,20 @@ class Canvas:
                 d.rectangle((x, y, x + 15, y + 15), outline=(255, 0, 255))
         else:
             self.unknown.append(cmd)
+
+    def _area_move(self, mode: int, direction: int, dist: int, fill: tuple[int, int, int],
+                   x1: int, y1: int, x2: int, y2: int) -> None:
+        """0x09: mode 1 shifts and fills the gap, mode 0 wraps around."""
+        box = (x1, y1, x2 + 1, y2 + 1)
+        region = self.buffer.crop(box)
+        w, h = region.size
+        dx, dy = {0: (-dist, 0), 1: (dist, 0), 2: (0, -dist), 3: (0, dist)}[direction]
+        moved = Image.new("RGB", region.size, fill)
+        moved.paste(region, (dx, dy))
+        if mode == 0:   # wrap: paste the part that fell off onto the other side
+            moved.paste(region, (dx + (w if dx < 0 else -w if dx > 0 else 0),
+                                 dy + (h if dy < 0 else -h if dy > 0 else 0)))
+        self.buffer.paste(moved, box[:2])
 
     def _hzk_text(self, x: int, y: int, data: bytes, size: int, fg: tuple[int, int, int]) -> None:
         offset, font = self.hzk[size]

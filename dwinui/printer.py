@@ -7,8 +7,22 @@ from typing import Any
 
 SUBSCRIBE_OBJECTS = (
     "print_stats", "display_status", "extruder", "heater_bed", "toolhead",
-    "gcode_move", "fan", "virtual_sdcard", "idle_timeout", "webhooks",
+    "gcode_move", "fan", "virtual_sdcard", "idle_timeout", "webhooks", "heaters",
 )
+SENSOR_LABELS = {"extruder": "Hotend", "heater_bed": "Bed"}
+
+
+def sensor_label(name: str) -> str:
+    """'temperature_sensor cartographer_coil' -> 'Cartographer Coil' (each word
+    gets a capital first letter; the rest is kept, so 'MCU' stays 'MCU')."""
+    if name in SENSOR_LABELS:
+        return SENSOR_LABELS[name]
+    words = name.split(None, 1)[-1].replace("_", " ").split()
+    return " ".join(w[:1].upper() + w[1:] for w in words)
+
+
+def _heater_order(name: str) -> tuple[int, str]:
+    return (0 if name.startswith("extruder") else 1 if name == "heater_bed" else 2, name)
 
 
 class Printer:
@@ -85,3 +99,16 @@ class Printer:
     @property
     def homed_axes(self) -> str:
         return self.get("toolhead", "homed_axes", "")
+
+    @property
+    def heater_names(self) -> list[str]:
+        """Controllable heaters, hotend(s) first, then bed, then the rest."""
+        return sorted(self.get("heaters", "available_heaters", []), key=_heater_order)
+
+    @property
+    def sensor_names(self) -> list[str]:
+        """Hotend(s) and bed first, then everything else sorted by label."""
+        names = dict.fromkeys([*self.heater_names, *self.get("heaters", "available_sensors", [])])
+        first = [n for n in names if n.startswith("extruder") or n == "heater_bed"]
+        rest = sorted((n for n in names if n not in first), key=lambda n: sensor_label(n).lower())
+        return sorted(first, key=_heater_order) + rest

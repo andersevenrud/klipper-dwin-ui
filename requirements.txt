@@ -1,2 +1,2 @@
-pyserial-asyncio-fast>=0.14
+pyserial>=3.5
 websockets>=13

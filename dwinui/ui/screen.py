@@ -214,7 +214,7 @@ class Confirm(Screen):
         bw = (x2 - x1 - 36) // 2
         by = y2 - 56
         self.buttons = [
-            ButtonWidget("dlg.b0", (x1 + 12, by, x1 + 12 + bw, by + 43), cancel, t.ACCENT),
+            ButtonWidget("dlg.b0", (x1 + 12, by, x1 + 12 + bw, by + 43), cancel, t.DISABLED),
             ButtonWidget("dlg.b1", (x2 - 12 - bw, by, x2 - 12, by + 43), ok, accent),
         ]
         self.widgets += self.buttons
