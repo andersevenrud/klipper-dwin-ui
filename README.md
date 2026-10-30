@@ -20,6 +20,10 @@ without Marlin and without a Klipper fork.
   - **Temperature:** set targets, or use a preheat preset.
   - **Move:** homing, and jogging with the knob.
   - **Extrude**, and **Tune:** speed, flow, fan and Z babystepping.
+  - **Fans:** set the part fan and any `fan_generic`, and see what the
+    automatic fans are doing.
+  - **Lights:** dim or switch `output_pin` lights and LEDs. The tile only
+    appears when the printer has lights.
   - **Macros**, and **System:** restarts, emergency stop, host power,
     backlight.
 - **Knob controls:** turn, press, and hold to go back; see

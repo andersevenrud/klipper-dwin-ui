@@ -27,6 +27,21 @@ SENSORS = {
     "temperature_fan Mainboard_MCU": 29.0, "temperature_sensor cartographer_coil": 24.0,
     "temperature_sensor Cartographer_MCU": 26.0, "temperature_fan Host_MCU": 36.0,
 }
+# Fans and lights, to exercise every kind the UI handles.
+DEVICES = {
+    "fan_generic exhaust": {"speed": 0.0},
+    "heater_fan hotend": {"speed": 0.0},
+    "controller_fan electronics": {"speed": 0.4},
+    "output_pin caselight": {"value": 0.0},
+    "output_pin relay": {"value": 0.0},
+    "output_pin _beeper": {"value": 0.0},
+    "neopixel toolhead": {"color_data": [[0.0, 0.0, 0.0, 0.0]]},
+}
+CONFIG_SETTINGS = {
+    "output_pin caselight": {"pwm": True, "scale": 1.0},
+    "output_pin relay": {"pwm": False, "scale": 1.0},
+    "output_pin _beeper": {"pwm": True, "scale": 1.0},
+}
 MACROS = ["PRINT_START", "PRINT_END", "LOAD_FILAMENT", "UNLOAD_FILAMENT", "BED_MESH_CALIBRATE",
           "_HOMING_VARS", "PARK"]
 
@@ -61,11 +76,14 @@ class FakeMoonraker:
             **{name: ({"temperature": temp, "target": 45.0, "speed": 0.3}
                       if name.startswith("temperature_fan") else {"temperature": temp})
                for name, temp in SENSORS.items()},
+            **{name: dict(status) for name, status in DEVICES.items()},
+            "configfile": {"settings": CONFIG_SETTINGS},
         }
 
     async def run(self) -> None:
         self.printer.connected = True
         self.printer.replace(self._initial())
+        self.printer.objects = list(self.printer.status) + [f"gcode_macro {m}" for m in MACROS]
         last = time.monotonic()
         while True:
             await asyncio.sleep(0.5)
@@ -83,6 +101,8 @@ class FakeMoonraker:
             step = rate * dt
             new = min(goal, cur + step) if cur < goal else max(goal, cur - step * 0.5)
             upd[heater] = {"temperature": round(new, 1)}
+        hot = self.printer.temp("extruder")[0] > 50
+        upd["heater_fan hotend"] = {"speed": 1.0 if hot else 0.0}
         ps = self.printer.status.get("print_stats", {})
         if ps.get("state") == "printing" and self._print_total:
             dur = ps.get("print_duration", 0.0) + dt
@@ -185,8 +205,7 @@ class FakeMoonraker:
         return store
 
     async def _m_printer_objects_list(self) -> dict:
-        return {"objects": ["webhooks", "extruder", "heater_bed"] +
-                [f"gcode_macro {m}" for m in MACROS]}
+        return {"objects": list(self.printer.status) + [f"gcode_macro {m}" for m in MACROS]}
 
     async def _m_printer_print_start(self, filename: str) -> str:
         if self.printer.job_active:
@@ -285,3 +304,12 @@ class FakeMoonraker:
             pr.update({"gcode_move": {"homing_origin": origin}})
         elif cmd == "M84":
             pr.update({"toolhead": {"homed_axes": ""}})
+        elif cmd == "SET_FAN_SPEED":
+            pr.update({f"fan_generic {words['FAN'].lower()}": {"speed": float(words["SPEED"])}})
+        elif cmd == "SET_PIN":
+            pr.update({f"output_pin {words['PIN'].lower()}": {"value": float(words["VALUE"])}})
+        elif cmd == "SET_LED":
+            name = next(o for o in pr.status if o.split()[0] in ("led", "neopixel")
+                        and o.split()[-1].upper() == words["LED"])
+            rgb = [float(words.get(c, 0)) for c in ("RED", "GREEN", "BLUE")]
+            pr.update({name: {"color_data": [rgb + [0.0]]}})

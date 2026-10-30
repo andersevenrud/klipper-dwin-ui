@@ -50,6 +50,8 @@ class MenuScreen(HeaderScreen):
         self.widgets += self.tiles + [self.back]
 
     def _entries(self) -> list[Entry]:
+        from ...printer import FAN_TYPES, LIGHT_TYPES
+        from .devices import FansScreen, LightsScreen
         from .extrude import ExtrudeScreen
         from .files import FilesScreen
         from .macros import MacrosScreen
@@ -67,6 +69,12 @@ class MenuScreen(HeaderScreen):
         tune = Entry("Tune", go(TuneScreen),
                      lambda: f"{pr.get('gcode_move', 'speed_factor', 1.0) * 100:.0f}%", "tune")
         temp = Entry("Temp", go(TemperatureScreen), temps, "temp")
+        devices = []
+        if pr.devices(FAN_TYPES):
+            devices.append(Entry("Fans", go(FansScreen), lambda: f"{pr.get('fan', 'speed', 0.0) * 100:.0f}%",
+                                 "fans"))
+        if pr.devices(LIGHT_TYPES):
+            devices.append(Entry("Lights", go(LightsScreen), icon="lights"))
         if pr.job_active:
             # Paused is when you'd swap filament; printing is when you'd nudge the head.
             if pr.job_state == "paused":
@@ -78,7 +86,7 @@ class MenuScreen(HeaderScreen):
             return [
                 pause,
                 Entry("Cancel", self._cancel, icon="cancel"),
-                tune, temp,
+                tune, temp, *devices,
                 Entry("Macros", go(MacrosScreen), icon="macros"),
                 tool,
                 Entry("System", go(SystemScreen), icon="system"),
@@ -89,7 +97,7 @@ class MenuScreen(HeaderScreen):
             Entry("Move", go(MoveScreen), lambda: pr.homed_axes.upper() and f"homed {pr.homed_axes.upper()}",
                   "move"),
             Entry("Extrude", go(ExtrudeScreen), icon="extrude"),
-            tune,
+            tune, *devices,
             Entry("Macros", go(MacrosScreen), icon="macros"),
             Entry("System", go(SystemScreen), icon="system"),
         ]

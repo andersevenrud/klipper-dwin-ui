@@ -12,7 +12,7 @@ from collections.abc import Callable
 from typing import Any
 
 from . import PROJECT_URL, __version__
-from .printer import SUBSCRIBE_OBJECTS, Printer
+from .printer import DEVICE_TYPES, SUBSCRIBE_OBJECTS, Printer
 
 log = logging.getLogger(__name__)
 
@@ -173,11 +173,15 @@ class Moonraker:
             self.printer.replace(res.get("status", {}))
             self.printer.set_state("ready", "")
 
-        # Sensors differ per printer: ask Klipper which exist, then subscribe to all.
+        # Sensors, fans and lights differ per printer: ask Klipper which exist,
+        # then subscribe to all of them.
         res = await self.call("printer.objects.query", objects={"heaters": None})
         heaters = res.get("status", {}).get("heaters", {})
         sensors = [*heaters.get("available_heaters", []), *heaters.get("available_sensors", [])]
-        names = dict.fromkeys([*SUBSCRIBE_OBJECTS, *sensors])
+        listing = await self.call("printer.objects.list")
+        self.printer.objects = list(listing.get("objects", []))
+        devices = [o for o in self.printer.objects if o.split()[0] in DEVICE_TYPES]
+        names = dict.fromkeys([*SUBSCRIBE_OBJECTS, *sensors, *devices])
         await self.call("printer.objects.subscribe", on_result=apply,
                         objects={name: None for name in names})
         log.info("subscribed to printer objects")

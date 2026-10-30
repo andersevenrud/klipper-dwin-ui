@@ -9,7 +9,14 @@ SUBSCRIBE_OBJECTS = (
     "print_stats", "display_status", "extruder", "heater_bed", "toolhead",
     "gcode_move", "fan", "virtual_sdcard", "idle_timeout", "webhooks", "heaters",
 )
-SENSOR_LABELS = {"extruder": "Hotend", "heater_bed": "Bed"}
+SENSOR_LABELS = {"extruder": "Hotend", "heater_bed": "Bed", "fan": "Part fan"}
+
+# Fans the user sets; the rest are run by Klipper (shown, not editable).
+MANUAL_FANS = ("fan", "fan_generic")
+FAN_TYPES = (*MANUAL_FANS, "heater_fan", "controller_fan", "temperature_fan")
+LED_TYPES = ("led", "neopixel", "dotstar", "pca9533", "pca9632")
+LIGHT_TYPES = ("output_pin", *LED_TYPES)
+DEVICE_TYPES = (*FAN_TYPES, *LIGHT_TYPES)
 
 
 def sensor_label(name: str) -> str:
@@ -31,6 +38,7 @@ class Printer:
         self.klippy_state = "disconnected"
         self.state_message = ""
         self.status: dict[str, dict[str, Any]] = {}
+        self.objects: list[str] = []     # every object Klipper has (printer.objects.list)
         self._listeners: list[Callable[[], None]] = []
 
     def listen(self, fn: Callable[[], None]) -> None:
@@ -99,6 +107,13 @@ class Printer:
     @property
     def homed_axes(self) -> str:
         return self.get("toolhead", "homed_axes", "")
+
+    def devices(self, types: tuple[str, ...]) -> list[str]:
+        """Objects of the given types, without "_hidden" ones; the part fan
+        first, then sorted by label."""
+        found = [o for o in self.objects
+                 if o.split()[0] in types and not o.split()[-1].startswith("_")]
+        return sorted(found, key=lambda o: (o != "fan", sensor_label(o).lower()))
 
     @property
     def heater_names(self) -> list[str]:

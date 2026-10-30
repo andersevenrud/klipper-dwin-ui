@@ -111,6 +111,10 @@ VARIANTS = {
     "tile_sel": (40, t.FG, t.ACCENT, TILE_ICONS),
     "small": (20, t.FG, t.BG, STATUS_ICONS),
 }
+# Icons added after the first release. They go at the end of the library so
+# every existing icon id stays the same, and a display flashed with an older
+# pack still shows the older icons correctly.
+LATER_TILE_ICONS = {"fans": "propeller", "lights": "bulb"}
 
 
 def fetch(name: str) -> Path:
@@ -238,14 +242,18 @@ def build_icons(ttf: Path, css: Path) -> tuple[bytes, dict, Image.Image]:
     entries = []
     index: dict[str, list[int]] = {}
     tiles = []
-    for variant, (size, fg, bg, names) in VARIANTS.items():
-        for name, tabler in names.items():
-            if tabler not in codepoints:
-                raise SystemExit(f"Tabler has no icon named {tabler!r}")
-            img = render_icon(ttf, codepoints[tabler], size, fg, bg)
-            index[f"{variant}/{name}"] = [len(entries), size, size]
-            entries.append((size, size, jpeg(img)))
-            tiles.append(img)
+    order = [(variant, name, tabler) for variant, (_, _, _, names) in VARIANTS.items()
+             for name, tabler in names.items()]
+    order += [(variant, name, tabler) for name, tabler in LATER_TILE_ICONS.items()
+              for variant in ("tile", "tile_sel")]
+    for variant, name, tabler in order:
+        size, fg, bg, _ = VARIANTS[variant]
+        if tabler not in codepoints:
+            raise SystemExit(f"Tabler has no icon named {tabler!r}")
+        img = render_icon(ttf, codepoints[tabler], size, fg, bg)
+        index[f"{variant}/{name}"] = [len(entries), size, size]
+        entries.append((size, size, jpeg(img)))
+        tiles.append(img)
     ico = pack_ico(entries)
     sheet = Image.new("RGB", (12 * 44, (len(tiles) + 11) // 12 * 44), rgb(t.BG))
     for i, img in enumerate(tiles):

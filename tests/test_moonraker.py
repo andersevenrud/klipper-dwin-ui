@@ -91,7 +91,10 @@ def test_full_session_against_websocket_server():
                 elif method == "printer.objects.query":
                     result = {"status": {"heaters": {"available_heaters": ["extruder"],
                                                      "available_sensors": ["extruder", "temperature_sensor mcu"]}}}
+                elif method == "printer.objects.list":
+                    result = {"objects": ["extruder", "fan", "output_pin light", "gcode_macro X"]}
                 elif method == "printer.objects.subscribe":
+                    assert "output_pin light" in msg["params"]["objects"]
                     assert "print_stats" in msg["params"]["objects"]
                     assert "temperature_sensor mcu" in msg["params"]["objects"]
                     result = {"eventtime": 1.0, "status": {
