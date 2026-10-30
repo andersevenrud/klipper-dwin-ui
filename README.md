@@ -161,6 +161,16 @@ requirements: requirements.txt
 managed_services: dwinui
 ```
 
+### Uninstall
+
+```sh
+~/klipper-dwin-ui/install/uninstall.sh
+```
+
+This removes the service, the udev rule, the Moonraker service entry and
+the virtualenv. It leaves your `dwinui.conf`, `moonraker.conf` and the
+repository alone, and tells you what's left for you to delete.
+
 ## Controls
 
 Everything works with the knob: **turn** it, **press** it, or **hold** it
