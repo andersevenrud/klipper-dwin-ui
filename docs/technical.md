@@ -190,6 +190,12 @@ The labels are as printed on the display PCB. TX is the display's output.
   *11 − n*).
 - **Levels:** the signals measured 3.2 V on a real display, so they are safe
   for 3.3 V GPIO.
+- **Beeper:** BEEP is an input on the display board, held low by the
+  board itself. Even the Pico's internal pull-up can't raise it. It drives
+  a buzzer that plays the tone it's given, and it works fine straight from
+  a GPIO pin with no series resistor. The bridge and the Pi backend drive it
+  with a 2.7 kHz, 50% duty square wave, which is the loudest this method
+  gets.
 
 ## Asset pack
 

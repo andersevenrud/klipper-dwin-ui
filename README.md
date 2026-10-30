@@ -36,7 +36,7 @@ without Marlin and without a Klipper fork.
     It plugs into the host over USB, so any host works.
   - **The Klipper host's own GPIO header**, if the host is a Raspberry Pi
     3, 4 or Zero 2 W with these pins free.
-- Dupont jumper wires, and a ~1 kΩ resistor for the beeper.
+- Dupont jumper wires.
 - A microSD card of any size, to flash the font and icons.
 
 ## Wiring
@@ -56,7 +56,7 @@ holes:
 | 8 | A | GP2 (pin 4) | GPIO17 (pin 11) |
 | 7 | B | GP3 (pin 5) | GPIO27 (pin 13) |
 | 5 | ENT | GP4 (pin 6) | GPIO22 (pin 15) |
-| 6 | BEEP | GP5 (pin 7), through 1 kΩ | GPIO18 (pin 12), through 1 kΩ |
+| 6 | BEEP | GP5 (pin 7) | GPIO18 (pin 12) |
 | 1, 2 | not used | | |
 
 Plugs are easy to read mirrored. Before you power anything, check with a
