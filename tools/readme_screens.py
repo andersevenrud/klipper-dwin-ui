@@ -2,11 +2,15 @@
 """Render the README screenshots from the simulator, with the custom asset
 pack (run tools/build_assets.py first).
 
-    python tools/readme_screens.py                    # -> docs/img/screens.png (fake printer)
     python tools/readme_screens.py --preview ws://printer:7125/websocket 3DBenchy.gcode
                                                       # -> docs/img/print-preview.png
+    python tools/readme_screens.py                    # -> docs/img/screens.png
 
---preview only reads from the printer: file metadata and the thumbnail.
+The strip shows home, menu, print preview and printing. Everything comes
+from the fake printer except the print preview, which is taken from
+docs/img/print-preview.png when it exists (a real slicer thumbnail looks
+better than the fake one). --preview only reads from the printer: file
+metadata and the thumbnail.
 """
 
 import argparse
@@ -32,6 +36,9 @@ GAP = 24
 SCALE = 2
 
 
+PREVIEW = ROOT / "docs" / "img" / "print-preview.png"
+
+
 async def capture() -> list[Image.Image]:
     if not BUILT_ASSETS.exists():
         raise SystemExit("build the asset pack first: python tools/build_assets.py")
@@ -43,8 +50,16 @@ async def capture() -> list[Image.Image]:
         await h.click()
         await h.rotate(1)
         shots.append(h.link.canvas.snapshot(SCALE))          # menu, Temp selected
+        if PREVIEW.exists():
+            shots.append(Image.open(PREVIEW).convert("RGB"))
+        else:
+            meta = await h.api.call("server.files.metadata", filename="benchy.gcode")
+            h.app.push(PrintPreview(h.app, "benchy.gcode", meta))
+            await h.settle(0.5)
+            shots.append(h.link.canvas.snapshot(SCALE))      # print preview (fake thumbnail)
+            await h.back()
         await h.back()
-        await h.api.call("printer.print.start", filename="benchy.gcode")
+        await h.api.call("printer.print.start", filename="3DBenchy_PLA_31m20s.gcode")
         await h.settle(12)                                   # let the demo print progress
         shots.append(h.link.canvas.snapshot(SCALE))          # printing
     return shots
@@ -81,9 +96,8 @@ def main() -> None:
     args = ap.parse_args()
     if args.preview:
         img = asyncio.run(capture_preview(*args.preview))
-        out = ROOT / "docs" / "img" / "print-preview.png"
-        img.quantize(colors=128, method=Image.Quantize.FASTOCTREE).save(out, optimize=True)
-        print(f"-> {out.relative_to(ROOT)} ({out.stat().st_size // 1024} KB)")
+        img.quantize(colors=128, method=Image.Quantize.FASTOCTREE).save(PREVIEW, optimize=True)
+        print(f"-> {PREVIEW.relative_to(ROOT)} ({PREVIEW.stat().st_size // 1024} KB)")
         return
     shots = asyncio.run(capture())
     w, h = shots[0].size

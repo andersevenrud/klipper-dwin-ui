@@ -16,6 +16,7 @@ log = logging.getLogger(__name__)
 
 FILES = [
     ("benchy.gcode", 3 * 3600, 2 * 3600 + 14 * 60, 5230.0),
+    ("3DBenchy_PLA_31m20s.gcode", 4 * 3600, 31 * 60 + 20, 3900.0),
     ("calibration/cube_20mm.gcode", 5 * 86400, 38 * 60, 1840.0),
     ("voron_cable_chain_x.gcode", 26 * 3600, 5 * 3600 + 2 * 60, 21400.0),
     ("filament_clip.gcode", 900, 9 * 60, 310.0),

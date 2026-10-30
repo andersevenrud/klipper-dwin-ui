@@ -248,9 +248,9 @@ uv venv && uv pip install -e '.[dev]'
 .venv/bin/dwinui --fake --display-port /dev/cu.usbmodemXXXX     # real display, fake printer
 .venv/bin/python -m dwinui.sim.harness shots/                 # screenshot tour of every screen
 .venv/bin/python tools/build_assets.py                        # asset pack
-.venv/bin/python tools/readme_screens.py                      # docs/img/screens.png
 .venv/bin/python tools/readme_screens.py --preview ws://printer.local:7125/websocket 3DBenchy.gcode
                                                               # docs/img/print-preview.png (read-only)
+.venv/bin/python tools/readme_screens.py                      # docs/img/screens.png, uses the preview above
 ```
 
 - **Simulator:** it decodes the exact byte stream the UI sends and renders

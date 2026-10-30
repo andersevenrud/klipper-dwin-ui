@@ -4,11 +4,9 @@ A KlipperScreen-like interface for the stock **Ender 3 V2 display**, running
 against Klipper through Moonraker. The display, knob and beeper work again,
 without Marlin and without a Klipper fork.
 
-![Home, menu and printing screens](docs/img/screens.png)
+![Home screen, menu, print preview and printing screen](docs/img/screens.png)
 
 ## Features
-
-<img src="docs/img/print-preview.png" width="272" align="right" alt="Print preview dialog showing a 3DBenchy thumbnail, print time, filament, layer and slicer details">
 
 - **Home screen**, like Mainsail's dashboard: every temperature sensor
   Klipper knows about, a live hotend/bed graph and the toolhead position.
