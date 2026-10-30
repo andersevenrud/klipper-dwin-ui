@@ -61,10 +61,11 @@ SOURCES = {
 NOTICE = """\
 Asset pack for klipper-dwin-ui (https://github.com/andersevenrud/klipper-dwin-ui)
 
-Copy only the DWIN_SET folder to the root of an empty FAT32 microSD card
-(4 KB clusters, 8 GB or less), insert it into the display while it is off,
-then power up: blue while flashing, orange when done. Then set
-custom_assets: true in dwinui.conf.
+Copy only the DWIN_SET folder to the root of a microSD card with a single
+FAT32 partition of 8 GB or less (4 KB clusters, MBR; the card itself can be
+bigger). Insert it into the display while it is off,
+then power up: blue while flashing, orange when done. dwinui uses the
+pack by default (custom_assets: true in dwinui.conf).
 
 Contents:
   0T5UIC1.HZK  font: Terminus Font by Dimitar Zhekov, converted to the

@@ -39,6 +39,7 @@ def test_text_clipped_to_right_edge():
 
 
 def test_symbols_keep_field_width():
+    p.set_glyphs({})
     try:
         assert p.encode_text("200°C ←") == b"200 C <"       # stock font fallbacks
         assert p.encode_text("ü") == b"?"

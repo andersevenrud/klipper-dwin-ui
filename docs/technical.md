@@ -238,10 +238,15 @@ in `ui/theme.py` changes, rebuild and reflash the pack.
   known to break the display.
 
 **Flashing details.**
-- **Card:** MBR, FAT32 with 4 KB clusters, and only `DWIN_SET` at the root.
-  Cards formatted in Finder have failed for people. On macOS,
-  `diskutil partitionDisk diskN 2 MBR "MS-DOS FAT32" DWIN 4G "Free Space" REST 0`
-  gives one 4 GB partition with 4 KB clusters.
+- **Card:** MBR, a single FAT32 partition with 4 KB clusters, and only
+  `DWIN_SET` at the root.
+  - **Size:** reports of "8 GB or less" (some say 16 GB) are about the
+    partition, not the card. A 32 GB card with one 4 GB partition and the
+    rest unpartitioned flashed fine.
+  - **Formatting tools:** cards formatted in Finder have failed for people.
+    On macOS,
+    `diskutil partitionDisk diskN 2 MBR "MS-DOS FAT32" DWIN 4G "Free Space" REST 0`
+    gives one 4 GB partition with 4 KB clusters.
 - **Partial sets:** fine. Only the banks a file covers get overwritten.
 - **Panel firmware:** don't include the display's `.BIN` or `.CFG`.
 - **Recovery:** flash the
@@ -270,8 +275,9 @@ uv venv && uv pip install -e '.[dev]'
     encoder, Enter clicks, and Esc long-presses (back).
   - **Byte counter:** the page shows the bytes sent, to keep an eye on the
     link budget.
-  - **Real assets:** add `--custom-assets` to draw text and icons from the
-    built `.HZK` and `.ICO`, so the preview matches the panel pixel for
-    pixel.
+  - **Real assets:** once `tools/build_assets.py` has run, text and icons
+    are drawn from the built `.HZK` and `.ICO`, so the preview matches the
+    panel pixel for pixel. Without a build it falls back to a stand-in
+    font. Add `--stock-assets` to preview a display without the pack.
 - **Fake printer:** `FakeMoonraker` simulates heaters, prints, homing and
   errors, and mirrors a real printer's sensor list.

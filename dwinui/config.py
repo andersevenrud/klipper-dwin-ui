@@ -27,7 +27,7 @@ class Config:
     invert_encoder: bool = False
     beep_on_click: bool = False
     beep_ms: int = 20
-    custom_assets: bool = False        # True once build/DWIN_SET is flashed
+    custom_assets: bool = True         # False if the asset pack isn't flashed
     # backend = pi
     encoder_device: str = "auto"       # input device path/glob, or auto-detect
     button_device: str = "auto"

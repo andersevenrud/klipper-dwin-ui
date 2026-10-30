@@ -22,13 +22,14 @@ without Marlin and without a Klipper fork.
     backlight.
 - **Knob controls:** turn, press, and hold to go back; see
   [Controls](#controls).
-- **Optional asset pack:** a sharper font, icons and a Klipper boot logo,
-  flashed from an SD card.
+- **Sharper font, icons and a Klipper boot logo**, flashed onto the display
+  once from a microSD card.
 
 ## What you need
 
-- An Ender 3 V2 display. The asset pack needs the usual DWIN version, with a
-  microSD slot on the back; TJC clone panels can't take it.
+- An Ender 3 V2 display, in the usual DWIN version with a microSD slot on
+  the back. Some later units have a TJC clone panel instead; those can't
+  take the font and icons, and haven't been tested.
 - A Klipper host running Moonraker.
 - One of:
   - **A Raspberry Pi Pico**, or any RP2040 board that runs CircuitPython.
@@ -36,6 +37,7 @@ without Marlin and without a Klipper fork.
   - **The Klipper host's own GPIO header**, if the host is a Raspberry Pi
     3, 4 or Zero 2 W with these pins free.
 - Dupont jumper wires, and a ~1 kΩ resistor for the beeper.
+- A microSD card of any size, to flash the font and icons.
 
 ## Wiring
 
@@ -102,7 +104,34 @@ backend: pi
 beeper_pwm: /sys/class/pwm/pwmchip0
 ```
 
-### 3. Start it
+### 3. Flash the font, icons and boot logo
+
+This gives you the font, icons and Klipper boot logo you see in the
+screenshots. Without it, dwinui uses the display's built-in font and shows
+no icons. The pack goes onto the display itself, once, from a microSD card.
+Creality's icons stay on the display, so stock firmware still works
+afterwards.
+
+> To skip this step, see [Without the asset pack](#without-the-asset-pack).
+
+1. **Download
+   [DWIN_SET.zip](https://github.com/andersevenrud/klipper-dwin-ui/releases/download/assets/DWIN_SET.zip)**
+   and unzip it.
+2. **Prepare a microSD card:**
+   - Give it a single FAT32 partition of 8 GB or less, with 4 KB clusters
+     (MBR partition table). On a bigger card, leave the rest unpartitioned.
+     Larger partitions and bigger clusters are a common reason a flash
+     fails.
+   - Copy only the `DWIN_SET` folder to the card's root, and put nothing
+     else on the card.
+3. **Flash it:**
+   - With the display unpowered, insert the card into the slot on the back
+     of the display.
+   - Power up. The screen turns **blue** while flashing, then **orange**
+     when done.
+   - Power off and remove the card.
+
+### 4. Start it
 
 ```sh
 sudo systemctl restart dwinui
@@ -156,39 +185,43 @@ You can change these in `dwinui.conf` under `[display]`:
 - `dim_timeout`: idle time before dimming, in seconds; `0` turns dimming
   off.
 
-## Optional: font, icons and boot logo
+## Font and icon pack
 
-The screenshots above use this pack. It replaces the display's built-in font
-and adds icons and a Klipper boot logo. The display keeps Creality's own
-icons, so stock firmware still works afterwards.
+### Without the asset pack
 
-1. **Download
-   [DWIN_SET.zip](https://github.com/andersevenrud/klipper-dwin-ui/releases/download/assets/DWIN_SET.zip)**
-   and unzip it. It is rebuilt automatically whenever the assets change.
+If the display still has its stock files, set this in `dwinui.conf` and
+restart dwinui:
 
-   You can also build it yourself, in a clone of this repo, on any computer
-   with Python 3.11 or newer:
-   ```sh
-   pip install -e '.[sim]'
-   python tools/build_assets.py      # -> build/DWIN_SET
-   ```
-2. **Prepare an SD card:**
-   - Format it as FAT32 with 4 KB clusters, with a single partition of
-     8 GB or less.
-   - Copy only the `DWIN_SET` folder to the card's root, and put nothing
-     else on the card. The zip's `LICENSES` folder and `README.txt` stay on
-     your computer.
-3. **Flash it:**
-   - With the display unpowered, insert the card into the slot on the back
-     of the display.
-   - Power up. The screen turns **blue** while flashing, then **orange**
-     when done.
-   - Power off and remove the card.
-4. **Turn it on** with `custom_assets: true` in `dwinui.conf`, then restart
-   dwinui.
+```ini
+[display]
+custom_assets: false
+```
 
-To undo it, flash the
-[stock files](https://github.com/mriscoc/Ender3V2S1/tree/Ender3V2S1-Bugfix/display%20assets/stock).
+dwinui then uses the display's built-in font and shows no icons. Symbols
+fall back to plain characters: `←` becomes `<` and `°` a space.
+Without this setting, those symbols show up as unrelated stock glyphs, and
+icons may come out as garbage.
+
+### Going back to stock
+
+Flash the
+[stock files](https://github.com/mriscoc/Ender3V2S1/tree/Ender3V2S1-Bugfix/display%20assets/stock)
+the same way, then set `custom_assets: false`. Your printer's original
+firmware works either way, because the pack leaves Creality's icons in
+place.
+
+### Building the pack yourself
+
+In a clone of this repo, on any computer with Python 3.11 or newer:
+
+```sh
+pip install -e '.[sim]'
+python tools/build_assets.py      # -> build/DWIN_SET
+```
+
+The script downloads the font and icon sources and checks them against
+fixed checksums. The GitHub Action runs the same script to make the
+download.
 
 ## More
 

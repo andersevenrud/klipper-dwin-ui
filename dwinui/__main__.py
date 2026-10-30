@@ -33,8 +33,8 @@ async def amain(args: argparse.Namespace) -> None:
         cfg.url = args.url
     if args.display_port:
         cfg.port = args.display_port
-    if args.custom_assets:
-        cfg.custom_assets = True
+    if args.stock_assets:
+        cfg.custom_assets = False
     printer = Printer()
     if args.fake:
         from .sim.fake_moonraker import FakeMoonraker
@@ -48,7 +48,11 @@ async def amain(args: argparse.Namespace) -> None:
         from .sim.link import SimLink
         from .sim.renderer import Canvas
         from .sim.web import Viewer
-        link: Link = SimLink(Canvas(BUILT_ASSETS if cfg.custom_assets else None))
+        if cfg.custom_assets and not BUILT_ASSETS.exists():
+            log.warning("no built asset pack in %s; the simulator draws with stand-in "
+                        "fonts (run tools/build_assets.py for the real look)", BUILT_ASSETS)
+        assets = BUILT_ASSETS if cfg.custom_assets and BUILT_ASSETS.exists() else None
+        link: Link = SimLink(Canvas(assets))
         tasks.append(Viewer(link, cfg.long_press_ms).serve(args.host, args.port))
     elif cfg.backend == "pi":
         link = PiLink(cfg.port, cfg.baud, cfg.encoder_device, cfg.button_device,
@@ -68,8 +72,8 @@ def main() -> None:
     ap.add_argument("--fake", action="store_true", help="use a fake printer instead of Moonraker")
     ap.add_argument("--url", help="Moonraker websocket URL (overrides config)")
     ap.add_argument("--display-port", help="display serial port (overrides config)")
-    ap.add_argument("--custom-assets", action="store_true",
-                    help="use the flashed custom font/icons (and build/DWIN_SET in --sim)")
+    ap.add_argument("--stock-assets", action="store_true",
+                    help="the display has its stock files, not the asset pack (custom_assets: false)")
     ap.add_argument("--host", default="127.0.0.1", help="simulator listen address")
     ap.add_argument("--port", type=int, default=8080, help="simulator port")
     ap.add_argument("-v", "--verbose", action="store_true")
