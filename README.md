@@ -15,8 +15,10 @@ without Marlin and without a Klipper fork.
 - **Printing screen** while a job runs: progress, time left, temperatures,
   speed, flow, fan and Z.
 - **Menus:**
-  - **Files:** start a print from a preview with the slicer's thumbnail,
-    print time and filament.
+  - **Print:** browse folders and start a print from a preview with the
+    slicer's thumbnail, print time and filament. Recent prints (from
+    Moonraker's history) are one press away, and files can be deleted from
+    the preview.
   - **Temperature:** set targets, or use a preheat preset.
   - **Move:** homing, and jogging with the knob.
   - **Extrude**, and **Tune:** speed, flow, fan and Z babystepping.

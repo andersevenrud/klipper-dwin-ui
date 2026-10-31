@@ -67,10 +67,11 @@ async def tour(outdir: Path) -> None:
         h.shot(outdir / "01_status_idle.png")
         await h.click()
         h.shot(outdir / "02_menu.png")
-        await h.click()                       # Files
+        await h.click()                       # Print
         await h.settle(0.2)
         h.shot(outdir / "03_files.png")
-        await h.click()                       # first file -> confirm
+        await h.rotate(2)
+        await h.click()                       # first file -> preview
         await h.settle(0.2)
         h.shot(outdir / "04_file_confirm.png")
         await h.back()

@@ -35,8 +35,9 @@ def test_preview_dialog_shows_thumbnail_and_prints():
     async def go():
         async with Harness(Config(long_press_ms=150, dim_timeout=0)) as h:
             await h.click()
-            await h.click()                       # Files
+            await h.click()                       # Print
             await h.settle(0.2)
+            await h.rotate(3)                     # past Recent prints and the folder
             await h.click()                       # newest file -> preview
             await h.settle(0.5)
             dialog = h.app.top

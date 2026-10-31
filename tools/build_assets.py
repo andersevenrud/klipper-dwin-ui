@@ -92,6 +92,7 @@ FONT_SLOTS = [
 GLYPH_SLOTS = {
     0x01: "°", 0x02: "←", 0x03: "→", 0x04: "↑", 0x05: "↓", 0x06: "…", 0x07: "•",
     0x0E: "±", 0x0F: "×", 0x10: "▲", 0x11: "▼", 0x12: "▶", 0x13: "◀", 0x14: "✓", 0x15: "µ",
+    0x16: "↻",
 }
 
 # UI name -> Tabler icon name
@@ -114,7 +115,7 @@ VARIANTS = {
 # Icons added after the first release. They go at the end of the library so
 # every existing icon id stays the same, and a display flashed with an older
 # pack still shows the older icons correctly.
-LATER_TILE_ICONS = {"fans": "propeller", "lights": "bulb"}
+LATER_TILE_ICONS = {"fans": "propeller", "lights": "bulb", "print": "printer"}
 
 
 def fetch(name: str) -> Path:

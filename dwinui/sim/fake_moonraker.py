@@ -18,6 +18,7 @@ FILES = [
     ("benchy.gcode", 3 * 3600, 2 * 3600 + 14 * 60, 5230.0),
     ("3DBenchy_PLA_31m20s.gcode", 4 * 3600, 31 * 60 + 20, 3900.0),
     ("calibration/cube_20mm.gcode", 5 * 86400, 38 * 60, 1840.0),
+    ("calibration/temp_tower/tower_190-230.gcode", 9 * 86400, 52 * 60, 4100.0),
     ("voron_cable_chain_x.gcode", 26 * 3600, 5 * 3600 + 2 * 60, 21400.0),
     ("filament_clip.gcode", 900, 9 * 60, 310.0),
 ]
@@ -62,6 +63,16 @@ class FakeMoonraker:
         self.gcode_log: list[str] = []
         self.calls: list[tuple[str, dict]] = []
         self._print_total = 0.0
+        now = time.time()
+        self.files = {path: now - age for path, age, _, _ in FILES}      # path -> mtime
+        # Print history, newest first, with repeats and failures like a real one.
+        self.history = [
+            ("benchy.gcode", "completed", now - 2 * 3600),
+            ("benchy.gcode", "klippy_shutdown", now - 3 * 3600),
+            ("calibration/cube_20mm.gcode", "cancelled", now - 30 * 3600),
+            ("old_part_since_deleted.gcode", "completed", now - 5 * 86400),
+            ("filament_clip.gcode", "completed", now - 6 * 86400),
+        ]
 
     def _initial(self) -> dict[str, dict[str, Any]]:
         return {
@@ -165,13 +176,45 @@ class FakeMoonraker:
         return self.fire("printer.gcode.script", script=script)
 
     async def _m_server_files_list(self, root: str = "gcodes") -> list[dict]:
-        now = time.time()
-        return [{"path": p, "modified": now - age, "size": 1_000_000, "permissions": "rw"}
-                for p, age, _, _ in FILES]
+        return [{"path": p, "modified": m, "size": 1_000_000, "permissions": "rw"}
+                for p, m in self.files.items()]
+
+    async def _m_server_files_get_directory(self, path: str = "gcodes", extended: bool = False) -> dict:
+        prefix = path.partition("/")[2]
+        prefix = prefix + "/" if prefix else ""
+        dirs, files = {}, []
+        for p, m in self.files.items():
+            if not p.startswith(prefix):
+                continue
+            rest = p[len(prefix):]
+            if "/" in rest:
+                dirs[rest.split("/")[0]] = max(m, dirs.get(rest.split("/")[0], 0))
+            else:
+                files.append({"filename": rest, "modified": m, "size": 1_000_000, "permissions": "rw"})
+        if not prefix:
+            dirs[".thumbs"] = time.time()
+        return {"dirs": [{"dirname": d, "modified": m, "size": 4096, "permissions": "rw"}
+                         for d, m in dirs.items()],
+                "files": files, "root_info": {"name": "gcodes", "permissions": "rw"}}
+
+    async def _m_server_files_delete_file(self, path: str) -> dict:
+        rel = path.partition("/")[2]
+        if rel not in self.files:
+            raise RPCError(f"File {path} does not exist", 404)
+        if self.printer.job_active and self.printer.get("print_stats", "filename") == rel:
+            raise RPCError(f"File {path} is currently being printed", 403)
+        del self.files[rel]
+        return {"item": {"path": rel, "root": "gcodes"}, "action": "delete_file"}
+
+    async def _m_server_history_list(self, limit: int = 50, order: str = "desc", **_) -> dict:
+        jobs = [{"job_id": f"{i:06X}", "filename": name, "status": status, "start_time": end - 1800,
+                 "end_time": end, "print_duration": 1700.0, "exists": name in self.files}
+                for i, (name, status, end) in enumerate(self.history)][:limit]
+        return {"count": len(jobs), "jobs": jobs}
 
     async def _m_server_files_metadata(self, filename: str) -> dict:
         for path, _, est, fil in FILES:
-            if path == filename:
+            if path == filename and path in self.files:
                 base = path.rsplit("/", 1)[-1].rsplit(".", 1)[0]
                 thumbs = [] if "cable_chain" in path else [
                     {"width": w, "height": w, "size": 0, "relative_path": f".thumbs/{base}-{w}x{w}.png"}

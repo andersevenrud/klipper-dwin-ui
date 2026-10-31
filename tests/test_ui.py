@@ -109,9 +109,10 @@ def test_print_start_from_files():
     async def go():
         async with Harness() as h:
             await h.click()
-            await h.click()                       # Files
+            await h.click()                       # Print
             await h.settle(0.2)
-            await h.click()                       # newest file -> confirm (OK focused)
+            await h.rotate(2)                     # past Recent prints and the folder
+            await h.click()                       # newest file -> preview (Print focused)
             await h.settle(0.2)
             await h.click()
             await h.settle(0.3)

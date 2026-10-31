@@ -92,7 +92,7 @@ class MenuScreen(HeaderScreen):
                 Entry("System", go(SystemScreen), icon="system"),
             ]
         return [
-            Entry("Files", go(FilesScreen), icon="files"),
+            Entry("Print", go(FilesScreen), icon="print"),
             temp,
             Entry("Move", go(MoveScreen), lambda: pr.homed_axes.upper() and f"homed {pr.homed_axes.upper()}",
                   "move"),

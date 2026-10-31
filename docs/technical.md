@@ -248,8 +248,8 @@ in `ui/theme.py` changes, rebuild and reflash the pack.
 - **Font (`.HZK`):** ten 1-bit tables of 128 glyphs, one per size, in size
   order. Rows run top to bottom, padded to whole bytes, with the most
   significant bit as the leftmost pixel; total 125,440 bytes.
-- **Symbols:** `° ← → ↑ ↓ … • ± × ▲ ▼ ▶ ◀ ✓ µ` live in slots 0x01–0x07 and
-  0x0E–0x15. With the stock font they fall back to single ASCII characters,
+- **Symbols:** `° ← → ↑ ↓ … • ± × ▲ ▼ ▶ ◀ ✓ µ ↻` live in slots 0x01–0x07 and
+  0x0E–0x16. With the stock font they fall back to single ASCII characters,
   so fixed-width fields keep their length.
 - **Icons (`.ICO`):** a 4 KB directory of 256 × 16-byte big-endian entries
   (width, height, offset, 24-bit length), followed by baseline JPEGs.

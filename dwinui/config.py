@@ -45,6 +45,7 @@ class Config:
     extrude_feedrate: float = 300.0
     babystep: float = 0.01
     dashboard_rows: int = 8            # sensor rows on the home screen; more scroll
+    recent_prints: int = 10            # files under Print > Recent prints; 0 hides it
     confirm_estop: bool = True
     confirm_macros: bool = True
     show_hidden_macros: bool = False
@@ -90,7 +91,7 @@ def load(path: str | Path | None) -> Config:
         "max_extruder_temp": float, "max_bed_temp": float, "min_extrude_temp": float,
         "xy_feedrate": float, "z_feedrate": float, "extrude_feedrate": float,
         "babystep": float, "confirm_estop": bool, "confirm_macros": bool,
-        "show_hidden_macros": bool, "dashboard_rows": int,
+        "show_hidden_macros": bool, "dashboard_rows": int, "recent_prints": int,
     })
 
     presets = [
