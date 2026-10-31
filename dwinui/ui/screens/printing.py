@@ -47,50 +47,49 @@ class PrintingScreen(HeaderScreen):
             labels.append(Text(f"st.{key}.l", x, y, len(s), font=1, fg=t.DIM, value=s))
 
         T = t.HEADER_H   # layout below the title bar
-        name_chars = (p.WIDTH - 6 - RX) // p.FONTS[1][0]
-        # Top: thumbnail, and beside it the file name, layer and Z.
-        self.thumb = Thumbnail("st.thumb", 6, T + 6, THUMB, t.BG)
-        self.file1 = Text("st.file1", RX, T + 6, name_chars, font=1)
-        self.file2 = Text("st.file2", RX, T + 22, name_chars, font=1)
-        label("layer", RX, T + 50, "Layer", icon=False)
-        self.layer = Text("st.layer", p.WIDTH - 6 - 9 * 10, T + 48, 9, font=2, align="right")
-        label("zh", RX, T + 80, "Z", icon=False)
-        self.z = Text("st.z", p.WIDTH - 6 - 13 * 10, T + 78, 13, font=2, align="right")
-        # Progress.
-        self.bar = Bar("st.bar", (6, T + 114, p.WIDTH - 6 - 48, T + 127))
-        self.percent = Text("st.pct", p.WIDTH - 6 - 5 * 8, T + 113, 5, font=1, align="right")
-        # Times.
-        label("elapsed", COLS[0], T + 138, "Elapsed")
-        label("remaining", COLS[1], T + 138, "Left")
-        label("done", COLS[2], T + 138, "Done at", icon=False)
-        self.elapsed = Text("st.elapsed", COLS[0], T + 156, 8, font=2)
-        self.remaining = Text("st.remaining", COLS[1], T + 156, 8, font=2)
-        self.finish = Text("st.finish", COLS[2], T + 156, 8, font=2)
+        # Top: the file name, then the thumbnail with the times beside it.
+        self.file = Text("st.file", 6, T + 6, (p.WIDTH - 12) // p.FONTS[1][0], font=1)
+        self.thumb = Thumbnail("st.thumb", 6, T + 30, THUMB, t.BG)
+        value_x = p.WIDTH - 6 - 7 * 10
+        for i, (key, s, icon) in enumerate((("elapsed", "Elapsed", True),
+                                             ("remaining", "Left", True),
+                                             ("done", "Done at", False))):
+            label(key, RX, T + 38 + 34 * i, s, icon=icon)
+        self.elapsed = Text("st.elapsed", value_x, T + 36, 7, font=2, align="right")
+        self.remaining = Text("st.remaining", value_x, T + 70, 7, font=2, align="right")
+        self.finish = Text("st.finish", value_x, T + 104, 7, font=2, align="right")
+        # Layer and Z.
+        label("layer", COLS[0], T + 150, "Layer", icon=False)
+        label("zh", 140, T + 150, "Z", icon=False)
+        self.layer = Text("st.layer", COLS[0], T + 170, 13, font=2)
+        self.z = Text("st.z", 140, T + 170, 13, font=2)
         # Temperatures.
-        label("hotend", COLS[0], T + 190, "Hotend")
-        label("bed", 140, T + 190, "Bed")
-        self.hotend = Text("st.hotend", COLS[0], T + 208, 9, font=3, fg=t.HOT)
-        self.bed = Text("st.bed", 140, T + 208, 9, font=3, fg=t.HOT)
+        label("hotend", COLS[0], T + 206, "Hotend")
+        label("bed", 140, T + 206, "Bed")
+        self.hotend = Text("st.hotend", COLS[0], T + 226, 9, font=3, fg=t.HOT)
+        self.bed = Text("st.bed", 140, T + 226, 9, font=3, fg=t.HOT)
         # Live motion.
-        label("speed", COLS[0], T + 246, "Speed")
-        label("flow", COLS[1], T + 246, "Flow")
-        label("fan", COLS[2], T + 246, "Fan")
-        self.speed = Text("st.speed", COLS[0], T + 264, 8, font=2)
-        self.flow = Text("st.flow", COLS[1], T + 264, 8, font=2)
-        self.fan = Text("st.fan", COLS[2], T + 264, 8, font=2)
+        label("speed", COLS[0], T + 266, "Speed")
+        label("flow", COLS[1], T + 266, "Flow")
+        label("fan", COLS[2], T + 266, "Fan")
+        self.speed = Text("st.speed", COLS[0], T + 286, 8, font=2)
+        self.flow = Text("st.flow", COLS[1], T + 286, 8, font=2)
+        self.fan = Text("st.fan", COLS[2], T + 286, 8, font=2)
         # Adjustments and usage.
-        label("offset", COLS[0], T + 298, "Offset")
-        label("filament", COLS[1], T + 298, "Used")
-        label("factors", COLS[2], T + 298, "Spd/Flow", icon=False)
-        self.offset = Text("st.offset", COLS[0], T + 316, 8, font=2)
-        self.filament = Text("st.filament", COLS[1], T + 316, 8, font=2)
-        self.factors = Text("st.factors", COLS[2], T + 316, 8, font=2)
-        # M117 / Klipper message, and the hint after the job.
-        self.message1 = Text("st.msg1", 6, T + 350, 32, font=1, fg=t.DIM)
-        self.message2 = Text("st.msg2", 6, T + 366, 32, font=1, fg=t.DIM)
-        self.hint = Text("st.hint", 0, 452, 34, font=1, fg=t.DIM, align="center")
+        label("offset", COLS[0], T + 322, "Offset")
+        label("filament", COLS[1], T + 322, "Used")
+        label("factors", COLS[2], T + 322, "Spd/Flow", icon=False)
+        self.offset = Text("st.offset", COLS[0], T + 342, 8, font=2)
+        self.filament = Text("st.filament", COLS[1], T + 342, 8, font=2)
+        self.factors = Text("st.factors", COLS[2], T + 342, 8, font=2)
+        # M117 / Klipper message, progress, and the hint after the job.
+        self.message1 = Text("st.msg1", 6, T + 372, 32, font=1, fg=t.DIM)
+        self.message2 = Text("st.msg2", 6, T + 388, 32, font=1, fg=t.DIM)
+        self.bar = Bar("st.bar", (6, T + 412, p.WIDTH - 6 - 48, T + 425))
+        self.percent = Text("st.pct", p.WIDTH - 6 - 5 * 8, T + 411, 5, font=1, align="right")
+        self.hint = Text("st.hint", 0, 456, 34, font=1, fg=t.DIM, align="center")
         self.widgets += labels + [
-            self.thumb, self.file1, self.file2, self.layer, self.z, self.bar, self.percent,
+            self.thumb, self.file, self.layer, self.z, self.bar, self.percent,
             self.elapsed, self.remaining, self.finish, self.hotend, self.bed, self.speed, self.flow,
             self.fan, self.offset, self.filament, self.factors, self.message1, self.message2, self.hint,
         ]
@@ -113,8 +112,8 @@ class PrintingScreen(HeaderScreen):
             self.thumb.jpeg = None
             asyncio.ensure_future(self._load_metadata(filename))
         name = (filename.rsplit("/", 1)[-1] or "No file loaded")
-        lines = wrap(name, self.file1.chars, 2) + ["", ""]
-        self.file1.value, self.file2.value = lines[0], lines[1]
+        chars = self.file.chars
+        self.file.value = name if len(name) <= chars else name[:chars - 1] + "…"
 
         current, total = self._layers()
         self.layer.value = f"{current or '-'} / {total or '-'}"
