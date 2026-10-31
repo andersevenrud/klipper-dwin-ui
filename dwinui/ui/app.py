@@ -51,6 +51,8 @@ class App:
         self._job_seen = False          # a job ran while we watched
         self._job_dismissed = False
         self.blocker: Screen | None = None
+        self.over_blocker: list[Screen] = []
+        self._console_listeners: list = []
         self._wake = asyncio.Event()
         self._full = True
         self._toast: tuple[str, str, float] | None = None
@@ -72,19 +74,28 @@ class App:
 
     @property
     def top(self) -> Screen:
-        return self.blocker or self.stack[-1]
+        if self.blocker:
+            return self.over_blocker[-1] if self.over_blocker else self.blocker
+        return self.stack[-1]
 
     def push(self, screen: Screen) -> None:
-        self.stack.append(screen)
+        # While Klipper isn't ready, screens open on top of the blocker
+        # (e.g. the console) and are dropped when it goes away.
+        (self.over_blocker if self.blocker else self.stack).append(screen)
         if not screen.modal:
             self._full = True
         screen.on_enter()
         self.invalidate()
 
     def pop(self) -> None:
-        if len(self.stack) <= 1:
+        if self.blocker:
+            if not self.over_blocker:
+                return
+            screen = self.over_blocker.pop()
+        elif len(self.stack) > 1:
+            screen = self.stack.pop()
+        else:
             return
-        screen = self.stack.pop()
         screen.on_exit()
         self._closed(screen)
         self.invalidate()
@@ -166,6 +177,9 @@ class App:
             self.blocker = BlockerScreen(self)
             self._full = True
         elif self.printer.ready and self.blocker is not None:
+            for screen in self.over_blocker:
+                screen.on_exit()
+            self.over_blocker.clear()
             self.blocker = None
             self.pop_to_root()
             self._full = True
@@ -183,6 +197,15 @@ class App:
     def _gcode_response(self, line: str) -> None:
         if line.startswith("!!"):
             self.toast(line.lstrip("! ").strip(), "error", 5.0)
+        for fn in list(self._console_listeners):
+            fn("response", line)
+
+    def listen_console(self, fn) -> None:
+        self._console_listeners.append(fn)
+
+    def unlisten_console(self, fn) -> None:
+        if fn in self._console_listeners:
+            self._console_listeners.remove(fn)
 
     async def beep(self, ms: int | None = None) -> None:
         try:

@@ -15,6 +15,7 @@ class SystemScreen(ListScreen):
         super().__init__(app)
         self.set_items([
             Item("Emergency stop", action=self._estop),
+            Item("Console", action=self._console),
             Item("Firmware restart", action=lambda: self._confirm(
                 "Firmware restart?", "Restarts Klipper and all MCUs.", "printer.firmware_restart")),
             Item("Restart Klipper", action=lambda: self._confirm(
@@ -32,6 +33,10 @@ class SystemScreen(ListScreen):
                  enabled=lambda: bool(self.app.settings.values)),
             Item("Version", value=lambda: __version__),
         ])
+
+    def _console(self) -> None:
+        from .console import ConsoleScreen
+        self.app.push(ConsoleScreen(self.app))
 
     def _reset_settings(self) -> None:
         def reset() -> None:

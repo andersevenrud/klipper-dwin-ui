@@ -38,23 +38,25 @@ class BlockerScreen(ListScreen):
         self.lines = [Text(f"blk.l{i}", 8, t.HEADER_H + 14 + i * 24, 32, font=1, fg=t.DIM)
                       for i in range(MSG_LINES)]
         self.widgets += self.lines
-        self._actions: tuple = ()
+        self._actions: tuple | None = None   # None: rows not built yet
         self._armed: str | None = None       # device awaiting a second press to cycle
         self._armed_at = 0.0
 
     def _wanted_actions(self) -> tuple:
         pr = self.printer
         if not pr.connected:
-            return ()
+            return (False,)
         power = tuple((d, pr.power[d].get("status") == "on") for d in pr.printer_supplies())
         restart = ("restart",) if pr.klippy_state in ("shutdown", "error") else ()
         # After an emergency stop (shutdown) a restart is the fix; an unreachable
         # MCU (error, startup) usually means its supply is off, so power comes first.
-        return restart + power if pr.klippy_state == "shutdown" else power + restart
+        ordered = restart + power if pr.klippy_state == "shutdown" else power + restart
+        return (True, *ordered)                       # first: Moonraker reachable
 
     def _rebuild(self, actions: tuple) -> None:
         items = []
-        for action in actions:
+        connected, *rest = actions
+        for action in rest:
             if action == "restart":
                 items += [
                     Item("Firmware restart", action=lambda: self.api.fire("printer.firmware_restart")),
@@ -69,7 +71,14 @@ class BlockerScreen(ListScreen):
                     items.append(Item(f"Power on: {device_label(device)}",
                                       action=lambda d=device: self._power_on(d)))
         self._actions = actions
+        # The reason Klipper stopped is usually in the last messages.
+        if connected:
+            items.append(Item("Console", action=self._console))
         self.set_items(items)
+
+    def _console(self) -> None:
+        from .console import ConsoleScreen
+        self.app.push(ConsoleScreen(self.app))
 
     def _power_on(self, device: str) -> None:
         self.app.toast(f"Switching on {device_label(device)}")

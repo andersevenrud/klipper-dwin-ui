@@ -23,7 +23,7 @@ def test_printer_off_then_on_from_the_not_ready_screen():
             labels = [i.label for i in blocker.items]
             # Only the printer's supply (locked while printing), not the lights plug;
             # restarts follow since Klipper is in error.
-            assert labels == ["Power on: Printer", "Firmware restart", "Restart Klipper"]
+            assert labels == ["Power on: Printer", "Firmware restart", "Restart Klipper", "Console"]
             blocker.list.selected = labels.index("Power on: Printer")
             await h.click()
             await h.settle(2.2)
@@ -83,7 +83,7 @@ def test_power_cycle_from_a_fatal_error(monkeypatch):
             await h.settle(0.3)
             blocker = h.app.blocker
             labels = [i.label() if callable(i.label) else i.label for i in blocker.items]
-            assert labels == ["Firmware restart", "Restart Klipper", "Power cycle: Printer"]
+            assert labels == ["Firmware restart", "Restart Klipper", "Power cycle: Printer", "Console"]
             blocker.list.selected = 2
             await h.click()                                   # first press only arms it
             assert h.printer.power["printer"]["status"] == "on"

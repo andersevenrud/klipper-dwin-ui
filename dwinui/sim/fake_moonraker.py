@@ -59,6 +59,12 @@ class FakeMoonraker:
         self.printer = printer
         self.speedup = speedup
         self.db: dict[str, dict] = db if db is not None else {}     # Moonraker's database
+        start = time.time() - 600
+        self.gcode_store: list[dict] = [
+            {"message": "// Klipper state: Ready", "time": start, "type": "response"},
+            {"message": "G28", "time": start + 60, "type": "command"},
+            {"message": "// probe at 110.000,110.000 is z=1.234567", "time": start + 75, "type": "response"},
+        ]
         self.on_error = lambda msg: None
         self.on_gcode_response = lambda line: None
         self.gcode_log: list[str] = []
@@ -351,10 +357,24 @@ class FakeMoonraker:
         return "ok"
 
     async def _m_printer_gcode_script(self, script: str) -> str:
-        for line in script.splitlines():
-            self.gcode_log.append(line)
-            self._gcode(line.strip())
+        self._store("command", script)
+        try:
+            for line in script.splitlines():
+                self.gcode_log.append(line)
+                self._gcode(line.strip())
+        except RPCError as e:
+            # Klipper also broadcasts the error as a gcode response.
+            self._store("response", f"!! {e}")
+            self.on_gcode_response(f"!! {e}")
+            raise
         return "ok"
+
+    def _store(self, kind: str, message: str) -> None:
+        self.gcode_store.append({"message": message, "time": time.time(), "type": kind})
+        del self.gcode_store[:-1000]
+
+    async def _m_server_gcode_store(self, count: int = 100) -> dict:
+        return {"gcode_store": self.gcode_store[-count:]}
 
     def _gcode(self, line: str) -> None:
         pr = self.printer
