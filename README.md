@@ -15,6 +15,9 @@ without Marlin and without a Klipper fork.
 - **Printing screen** while a job runs: the slicer's thumbnail, layer and
   height, progress, time left and finish time, temperatures, live speed and
   volumetric flow, fan, Z offset and filament used.
+- **Pauses** wake the screen with a beep. When a filament sensor sees no
+  filament, the printing screen says so, and the menu offers Resume and
+  Extrude first.
 - **Messages** from `M117` pop up briefly at the bottom of the screen.
 - **Macro prompts** (`action:prompt_begin` ...), as Mainsail and
   KlipperScreen show them: the text, and the buttons as a list.
@@ -25,7 +28,10 @@ without Marlin and without a Klipper fork.
     the preview.
   - **Temperature:** set targets, or use a preheat preset.
   - **Move:** homing, and jogging with the knob.
-  - **Extrude**, and **Tune:** speed, flow and Z babystepping, which
+  - **Extrude:** heat the hotend to a preset, run your own
+    `LOAD_FILAMENT`/`UNLOAD_FILAMENT` macros (names set in `dwinui.conf`,
+    rows shown only when they exist), or extrude and retract by hand.
+  - **Tune:** speed, flow and Z babystepping, which
     can be saved to the probe or Z endstop offset (`SAVE_CONFIG` waits until
     the print is done).
   - **Fans:** set the part fan and any `fan_generic`, and see what the

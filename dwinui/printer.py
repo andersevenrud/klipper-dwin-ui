@@ -16,7 +16,8 @@ MANUAL_FANS = ("fan", "fan_generic")
 FAN_TYPES = (*MANUAL_FANS, "heater_fan", "controller_fan", "temperature_fan")
 LED_TYPES = ("led", "neopixel", "dotstar", "pca9533", "pca9632")
 LIGHT_TYPES = ("output_pin", *LED_TYPES)
-DEVICE_TYPES = (*FAN_TYPES, *LIGHT_TYPES)
+RUNOUT_TYPES = ("filament_switch_sensor", "filament_motion_sensor")
+DEVICE_TYPES = (*FAN_TYPES, *LIGHT_TYPES, *RUNOUT_TYPES)
 
 
 def sensor_label(name: str) -> str:
@@ -122,6 +123,24 @@ class Printer:
     @property
     def homed_axes(self) -> str:
         return self.get("toolhead", "homed_axes", "")
+
+    def macro(self, name: str) -> str | None:
+        """The macro's name as Klipper knows it, if one by that name exists
+        (G-code commands are case-insensitive)."""
+        for obj in self.objects:
+            kind, _, macro = obj.partition(" ")
+            if kind == "gcode_macro" and macro.upper() == name.upper():
+                return macro
+        return None
+
+    def runout(self) -> str | None:
+        """Label of an enabled filament sensor that sees no filament."""
+        for obj in self.objects:
+            if obj.split()[0] in RUNOUT_TYPES:
+                st = self.status.get(obj, {})
+                if st.get("enabled", True) and st.get("filament_detected") is False:
+                    return sensor_label(obj)
+        return None
 
     def devices(self, types: tuple[str, ...]) -> list[str]:
         """Objects of the given types, without "_hidden" ones; the part fan

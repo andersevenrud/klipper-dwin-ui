@@ -38,6 +38,7 @@ DEVICES = {
     "output_pin relay": {"value": 0.0},
     "output_pin _beeper": {"value": 0.0},
     "neopixel toolhead": {"color_data": [[0.0, 0.0, 0.0, 0.0]]},
+    "filament_switch_sensor runout": {"filament_detected": True, "enabled": True},
 }
 SCREWS = {"screw1": [30, 30], "screw1_name": "front left", "screw2": [200, 30],
           "screw2_name": "front right", "screw3": [200, 200], "screw3_name": "rear right",
@@ -86,7 +87,7 @@ POWER = {
                "type": "tplink_smartplug"},
 }
 MACROS = ["PRINT_START", "PRINT_END", "LOAD_FILAMENT", "UNLOAD_FILAMENT", "BED_MESH_CALIBRATE",
-          "_HOMING_VARS", "PARK", "PROMPT_DEMO"]
+          "_HOMING_VARS", "PARK", "PROMPT_DEMO", "RUNOUT_DEMO"]
 
 
 class FakeMoonraker:
@@ -191,6 +192,8 @@ class FakeMoonraker:
                                     "live_extruder_velocity": round(2.4 + 1.2 * wobble, 3)}
             if progress >= 1.0:
                 upd["print_stats"]["state"] = "complete"
+        else:
+            upd["motion_report"] = {"live_velocity": 0.0, "live_extruder_velocity": 0.0}
         self.printer.update(upd)
 
     # -- RPC ------------------------------------------------------------
@@ -550,6 +553,16 @@ class FakeMoonraker:
             kind = words.get("TYPE", "ECHO").lower()
             prefix = {"command": "//", "error": "!!"}.get(kind, "echo:")
             self._respond(f"{prefix} {(m.group(1) or m.group(2) or '').strip() if m else ''}")
+        elif cmd == "RUNOUT_DEMO":
+            # What a runout sensor's runout_gcode (PAUSE) does mid-print.
+            if not pr.job_active:
+                raise RPCError("RUNOUT_DEMO: start a print first", 400)
+            pr.update({"filament_switch_sensor runout": {"filament_detected": False},
+                       "print_stats": {"state": "paused"}})
+        elif cmd in ("LOAD_FILAMENT", "UNLOAD_FILAMENT"):
+            loading = cmd == "LOAD_FILAMENT"
+            self._respond(f"// {'Loading' if loading else 'Unloading'} filament")
+            pr.update({"filament_switch_sensor runout": {"filament_detected": loading}})
         elif cmd == "PROMPT_DEMO":
             for message in PROMPT_DEMO:
                 self._respond(f"// {message}")

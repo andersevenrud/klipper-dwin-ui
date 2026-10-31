@@ -47,6 +47,8 @@ class Config:
     dashboard_rows: int = 8            # sensor rows on the home screen; more scroll
     recent_prints: int = 10            # files under Print > Recent prints; 0 hides it
     message_seconds: float = 5.0       # M117 pop-ups; 0 turns them off
+    load_macro: str = "LOAD_FILAMENT"  # Extrude > Load, when the macro exists
+    unload_macro: str = "UNLOAD_FILAMENT"
     confirm_estop: bool = True
     confirm_macros: bool = True
     show_hidden_macros: bool = False
@@ -93,7 +95,7 @@ def load(path: str | Path | None) -> Config:
         "xy_feedrate": float, "z_feedrate": float, "extrude_feedrate": float,
         "babystep": float, "confirm_estop": bool, "confirm_macros": bool,
         "show_hidden_macros": bool, "dashboard_rows": int, "recent_prints": int,
-        "message_seconds": float,
+        "message_seconds": float, "load_macro": str, "unload_macro": str,
     })
 
     presets = [

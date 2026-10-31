@@ -183,8 +183,8 @@ class Moonraker:
             self.printer.replace(res.get("status", {}))
             self.printer.set_state("ready", "")
 
-        # Sensors, fans and lights differ per printer: ask Klipper which exist,
-        # then subscribe to all of them.
+        # Sensors, fans, lights and runout sensors differ per printer: ask
+        # Klipper which exist, then subscribe to all of them.
         res = await self.call("printer.objects.query", objects={"heaters": None})
         heaters = res.get("status", {}).get("heaters", {})
         sensors = [*heaters.get("available_heaters", []), *heaters.get("available_sensors", [])]

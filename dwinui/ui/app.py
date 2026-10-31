@@ -49,6 +49,10 @@ class App:
         self.settings.listen(self._apply_settings)
         self.stack: list[Screen] = [DashboardScreen(self)]
         self._job_was_active = False
+        self._job_was_paused = False
+        self._last_runout: str | None = None
+        self._runout_pending: str | None = None
+        self.pause_reason: str | None = None   # "Filament runout: ..." for this pause
         self._job_seen = False          # a job ran while we watched
         self._job_dismissed = False
         self.blocker: Screen | None = None
@@ -143,6 +147,12 @@ class App:
             self._job_dismissed = False
             self.pop_to_root()          # a new job: show it, wherever it was started from
         self._job_was_active = active
+        paused = pr.job_state == "paused"
+        self._track_runout(active, paused)
+        if paused and not self._job_was_paused:
+            self.wake()                 # someone should come and look
+            asyncio.ensure_future(self.beep(200))
+        self._job_was_paused = paused
         finished = pr.job_state in ("complete", "cancelled", "error")
         want = PrintingScreen if active or (self._job_seen and finished and not self._job_dismissed) \
             else DashboardScreen
@@ -220,6 +230,22 @@ class App:
                 if self.printer.connected:
                     since = time.time()
             await asyncio.sleep(0.5)
+
+    def _track_runout(self, active: bool, paused: bool) -> None:
+        """Klipper doesn't say why it paused. A sensor that ran out during the
+        job explains the next pause; one still empty from before doesn't
+        explain a later manual pause."""
+        runout = self.printer.runout()
+        if runout and not self._last_runout and active:
+            self._runout_pending = runout
+        if not runout:
+            self._runout_pending = None
+        self._last_runout = runout
+        if paused and not self._job_was_paused:
+            self.pause_reason = f"Filament runout: {self._runout_pending}" if self._runout_pending else None
+            self._runout_pending = None
+        if not paused or not runout:
+            self.pause_reason = None
 
     def dismiss_job(self) -> None:
         self._job_dismissed = True

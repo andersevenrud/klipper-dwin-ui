@@ -151,7 +151,11 @@ class PrintingScreen(HeaderScreen):
                               f"{pr.get('gcode_move', 'extrude_factor', 1.0) * 100:.0f}%")
         message = pr.get("display_status", "message", "") or pr.get("print_stats", "message", "")
         msg = wrap(message, 32, 2) + ["", ""] if message else ["", ""]
+        reason = self.app.pause_reason if state == "paused" else None
+        if reason:
+            msg = [reason[:32], msg[0]]
         self.message1.value, self.message2.value = msg[0], msg[1]
+        self.message1.fg = t.WARN if reason else t.DIM
 
     def _layers(self) -> tuple[int | None, int | None]:
         """Layer x / y: from the slicer (SET_PRINT_STATS_INFO) if it reports it,
