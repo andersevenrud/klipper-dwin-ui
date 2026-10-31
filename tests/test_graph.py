@@ -93,7 +93,8 @@ def test_job_lifecycle_switches_root_screen():
             h.printer.update({"print_stats": {"state": "complete"}})
             await h.settle(0.3)
             assert isinstance(h.app.top, PrintingScreen)      # result stays visible
-            await h.click()
+            await h.click()                                   # dialog: Home | Print again
+            await h.click()                                   # Home is preselected
             await h.settle(0.3)
             assert isinstance(h.app.top, DashboardScreen)
     asyncio.run(go())

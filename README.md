@@ -204,7 +204,7 @@ down for about half a second (600 ms).
 | Jogging or Z offset (`◀▶` row) | move immediately | done | done |
 | Dialogs | choose a button | confirm the choice | close |
 | Printing screen | — | open the menu | — |
-| After a print | — | return home | — |
+| After a print | — | choose Home or Reprint | — |
 
 - **Holding:** it acts as soon as you've held long enough, so you don't need
   to let go first.

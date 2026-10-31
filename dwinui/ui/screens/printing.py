@@ -83,6 +83,8 @@ class PrintingScreen(HeaderScreen):
         self.header_title.value = label
         self.header_title.fg = color
 
+        # Only once the job has ended: a press then opens Home / Reprint.
+        self.hint.value = "" if pr.job_active else "Press to continue"
         filename = pr.get("print_stats", "filename", "")
         self.filename.value = filename or "No file loaded"
         self.message.value = pr.get("display_status", "message", "") or pr.get("print_stats", "message", "")
@@ -115,8 +117,6 @@ class PrintingScreen(HeaderScreen):
             self.finish.value = "Done at " + time.strftime("%H:%M", time.localtime(time.time() + remaining))
         else:
             self.finish.value = ""
-        # Only after the job ends: a press is then the way back to the home screen.
-        self.hint.value = "" if pr.job_active else "Press to return home"
 
     def _remaining(self, progress: float, elapsed: float) -> float | None:
         estimate = self._metadata.get("estimated_time")
@@ -137,10 +137,24 @@ class PrintingScreen(HeaderScreen):
 
     def on_click(self) -> None:
         if not self.printer.job_active:
-            self.app.dismiss_job()
+            self._finished_dialog()
             return
         from .menu import MenuScreen
         self.app.push(MenuScreen(self.app))
+
+    def _finished_dialog(self) -> None:
+        """After a job: back to the home screen, or the same file again."""
+        from ..screen import Confirm
+
+        state = self.printer.job_state
+        title = {"complete": "Print complete", "cancelled": "Print cancelled"}.get(state, "Print failed")
+        filename = self.printer.get("print_stats", "filename", "")
+
+        def again() -> None:
+            self.api.fire("printer.print.start", filename=filename)
+
+        self.app.push(Confirm(self.app, title, filename, again, ok="Reprint", cancel="Home",
+                              on_cancel=self.app.dismiss_job))
 
     def on_back(self) -> None:
         pass

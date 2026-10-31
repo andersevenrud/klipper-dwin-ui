@@ -161,3 +161,30 @@ def test_redraws_after_panel_power_glitch():
             assert not h.app.panel_lost
             assert h.link.canvas.screen.getpixel((200, 4)) == header
     run(go())
+
+
+
+def test_print_again_after_a_finished_print():
+    from dwinui.ui.screen import Confirm
+    from dwinui.ui.screens.printing import PrintingScreen
+
+    async def go():
+        async with Harness(Config(long_press_ms=150, dim_timeout=0)) as h:
+            await h.api.call("printer.print.start", filename="filament_clip.gcode")
+            await h.settle(0.3)
+            h.printer.update({"print_stats": {"state": "cancelled"}})
+            await h.settle(0.3)
+            await h.click()
+            dialog = h.app.top
+            assert isinstance(dialog, Confirm)
+            assert dialog.widgets[2].value == "Print cancelled"     # title follows the result
+            await h.back()                                          # hold: just close it
+            assert isinstance(h.app.top, PrintingScreen)
+            await h.click()
+            await h.rotate(1)                                       # -> Print again
+            await h.click()
+            await h.settle(0.4)
+            assert h.printer.job_state == "printing"
+            assert h.printer.get("print_stats", "filename") == "filament_clip.gcode"
+            assert isinstance(h.app.top, PrintingScreen)
+    run(go())

@@ -201,10 +201,13 @@ class Confirm(Screen):
 
     def __init__(self, app: App, title: str, message: str, on_ok: Callable[[], None],
                  ok: str = "OK", cancel: str = "Cancel", danger: bool = False,
-                 default_ok: bool = False) -> None:
+                 default_ok: bool = False, on_cancel: Callable[[], None] | None = None) -> None:
+        """on_cancel runs when the left button is chosen; holding the knob
+        just closes the dialog."""
         super().__init__(app)
         x1, y1, x2, y2 = self.area
         self.on_ok = on_ok
+        self.on_cancel = on_cancel
         self.choice = 1 if default_ok else 0
         accent = t.ERROR if danger else t.ACCENT
         self.widgets.append(Box("dlg.bg", self.area, t.TILE_BG))
@@ -234,6 +237,8 @@ class Confirm(Screen):
         self.app.pop()
         if self.choice == 1:
             self.on_ok()
+        elif self.on_cancel:
+            self.on_cancel()
 
 
 class ButtonWidget(Widget):
