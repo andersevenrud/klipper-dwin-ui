@@ -115,7 +115,8 @@ VARIANTS = {
 # Icons added after the first release. They go at the end of the library so
 # every existing icon id stays the same, and a display flashed with an older
 # pack still shows the older icons correctly.
-LATER_TILE_ICONS = {"fans": "propeller", "lights": "bulb", "print": "printer"}
+LATER_TILE_ICONS = {"fans": "propeller", "lights": "bulb", "print": "printer",
+                    "calibrate": "ruler-measure"}
 
 
 def fetch(name: str) -> Path:

@@ -6,7 +6,7 @@ A KlipperScreen-like interface for the stock **Ender 3 V2 display**, running
 against Klipper through Moonraker. The display, knob and beeper work again,
 without Marlin and without a Klipper fork.
 
-![Home screen, menu, print preview and printing screen](docs/img/screens.png)
+![Home screen, menu, print preview, printing screen and bed mesh](docs/img/screens.png)
 
 ## Features
 
@@ -16,6 +16,8 @@ without Marlin and without a Klipper fork.
   height, progress, time left and finish time, temperatures, live speed and
   volumetric flow, fan, Z offset and filament used.
 - **Messages** from `M117` pop up briefly at the bottom of the screen.
+- **Macro prompts** (`action:prompt_begin` ...), as Mainsail and
+  KlipperScreen show them: the text, and the buttons as a list.
 - **Menus:**
   - **Print:** browse folders and start a print from a preview with the
     slicer's thumbnail, print time and filament. Recent prints (from
@@ -30,6 +32,12 @@ without Marlin and without a Klipper fork.
     automatic fans are doing.
   - **Lights:** dim or switch `output_pin` lights and LEDs. The tile only
     appears when the printer has lights.
+  - **Calibrate:** a bed mesh heatmap (calibrate, load or clear profiles),
+    screws tilt results, bed screws, Z tilt or gantry levelling, and the
+    paper test for the probe offset or Z endstop. The paper test, bed
+    screws and screws tilt results also open when those are started from
+    Mainsail or a macro, with the knob for `TESTZ` and rows for
+    `ACCEPT`/`ABORT`.
   - **Macros**, and **System:** restarts, emergency stop, host power,
     backlight, Moonraker power devices (`[power]`), and a console with
     Klipper's recent messages.

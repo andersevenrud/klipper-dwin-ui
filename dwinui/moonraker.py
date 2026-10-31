@@ -198,6 +198,11 @@ class Moonraker:
         # Live toolhead and extruder speed for the printing screen; not the
         # positions and stepper lists, which change constantly.
         objects["motion_report"] = ["live_velocity", "live_extruder_velocity"]
+        # Calibration helpers, when configured: the screens that take over
+        # while Klipper waits for input, and the screws tilt result.
+        for name in ("manual_probe", "bed_screws", "screws_tilt_adjust"):
+            if name in self.printer.objects:
+                objects[name] = None
         await self.call("printer.objects.subscribe", on_result=apply, objects=objects)
         log.info("subscribed to printer objects")
 

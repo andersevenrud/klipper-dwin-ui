@@ -51,6 +51,7 @@ class MenuScreen(HeaderScreen):
 
     def _entries(self) -> list[Entry]:
         from ...printer import FAN_TYPES, LIGHT_TYPES
+        from .calibrate import CalibrateScreen
         from .devices import FansScreen, LightsScreen
         from .extrude import ExtrudeScreen
         from .files import FilesScreen
@@ -100,6 +101,7 @@ class MenuScreen(HeaderScreen):
             tune,
             Entry("Macros", go(MacrosScreen), icon="macros"),
             *devices,                                   # Fans and Lights share a row
+            Entry("Calibrate", go(CalibrateScreen), icon="calibrate"),
             Entry("System", go(SystemScreen), icon="system"),
         ]
 

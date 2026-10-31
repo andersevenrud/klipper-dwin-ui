@@ -190,6 +190,16 @@
    37,
    40,
    40
+  ],
+  "tile/calibrate": [
+   38,
+   40,
+   40
+  ],
+  "tile_sel/calibrate": [
+   39,
+   40,
+   40
   ]
  },
  "glyphs": {

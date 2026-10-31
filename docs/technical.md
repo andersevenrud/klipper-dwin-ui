@@ -63,6 +63,25 @@ wherever it was started from, the printing screen replaces it and the stack
 returns to the root. After the job ends, the printing screen stays on
 Complete/Cancelled until it's dismissed.
 
+**Takeover screens.** Some screens open because of what Klipper does,
+whoever started it (the display, Mainsail or a macro), and close when it
+ends. Anything opened on top of them closes with them.
+- **Macro prompts:** the `// action:prompt_*` response lines, parsed as
+  Mainsail does (`dwinui/prompts.py`). A prompt opened before dwinui
+  connected is found in Moonraker's G-code store. After a Klipper restart
+  that dwinui saw, only newer entries count, since the restart closed any
+  prompt. Holding the knob closes the prompt in Klipper too, with
+  `RESPOND TYPE=command MSG="action:prompt_end"`.
+- **Manual probe** (`manual_probe.is_active`: `PROBE_CALIBRATE`,
+  `Z_ENDSTOP_CALIBRATE`, a mesh without a probe) and **bed screws**
+  (`bed_screws.is_active`). The knob sends `TESTZ`, the rows `ACCEPT`,
+  `ADJUSTED` and `ABORT`. Klipper's own config (screw names, whether there's
+  a Z endstop) is asked for with `printer.objects.query` when needed rather
+  than subscribed, as are the bed mesh matrices.
+- **Screws tilt results:** new `screws_tilt_adjust` results open the
+  screws tilt screen, unless a print is running. The results already there
+  when dwinui connects don't.
+
 **Panel resets.** The render cache assumes the panel still shows what was
 sent. If the panel reboots on its own (a power glitch), it comes back on its
 boot screen, and only changed values would be redrawn on top of it.

@@ -15,6 +15,7 @@ from ..link import LinkClosed
 from ..settings import Settings
 from ..link import Link
 from ..printer import Printer
+from ..prompts import CLOSE, PromptTracker
 from . import theme as t
 from .screen import Screen
 from .widgets import wrap
@@ -66,6 +67,8 @@ class App:
         self._last_reply = time.monotonic()
         self.panel_lost = False
         self._message: str | None = None   # last M117 seen; None until ready
+        self.prompts = PromptTracker()
+        self._tilt_results: str | None = None   # screws tilt result seen; None until ready
 
         printer.listen(self.invalidate)
         printer.listen(self._watch_message)
@@ -148,6 +151,76 @@ class App:
             if len(self.stack) == 1:
                 self._full = True
 
+    def _sync_takeovers(self) -> None:
+        """Screens Klipper calls up: a macro's prompt, the manual probe and
+        bed screws helpers while they wait for TESTZ/ACCEPT/ABORT, and new
+        screws tilt results (as Mainsail shows them, but not mid-print)."""
+        from .screens.calibrate import BedScrewsScreen, ManualProbeScreen, ScrewsTiltScreen
+        from .screens.prompt import PromptScreen
+
+        pr = self.printer
+        prompt = self.prompts.current
+        shown = next((s for s in self.stack if isinstance(s, PromptScreen)), None)
+        if shown and shown.prompt is not prompt:
+            self._remove(shown)
+        if prompt and (shown is None or shown.prompt is not prompt):
+            self._take_over(PromptScreen(self, prompt))
+        for cls, active in ((ManualProbeScreen, pr.get("manual_probe", "is_active", False)),
+                            (BedScrewsScreen, pr.get("bed_screws", "is_active", False))):
+            shown = next((s for s in self.stack if isinstance(s, cls)), None)
+            if active and shown is None:
+                self._take_over(cls(self))
+            elif shown and not active:
+                self._remove(shown)
+        results = pr.get("screws_tilt_adjust", "results", {}) or {}
+        key = repr(results)
+        if self._tilt_results is not None and key != self._tilt_results and results \
+                and not pr.job_active and not any(isinstance(s, ScrewsTiltScreen) for s in self.stack):
+            self._take_over(ScrewsTiltScreen(self))
+        self._tilt_results = key
+
+    def _take_over(self, screen: Screen) -> None:
+        self.push(screen)
+        self.wake()
+        asyncio.ensure_future(self.beep(60))
+
+    def _remove(self, screen: Screen) -> None:
+        """Close a screen wherever it is, with anything opened on top of it."""
+        index = self.stack.index(screen)
+        while len(self.stack) > index:
+            self.pop()
+
+    def close_prompt(self) -> None:
+        """Close the prompt here and in Klipper (for Mainsail too)."""
+        self.prompts.reset()
+        self.api.gcode_fire(CLOSE)
+        self.invalidate()
+
+    async def _replay_prompts(self) -> None:
+        """A prompt opened before we connected is in Moonraker's G-code store.
+        After a Klipper restart we saw happen, older entries are stale."""
+        replayed = False
+        since: float | None = None
+        while True:
+            if self.printer.ready and not replayed:
+                replayed = True
+                try:
+                    res = await self.api.call("server.gcode_store", count=100)
+                except Exception as e:  # noqa: BLE001 - no replay, live prompts still work
+                    log.debug("no gcode store: %s", e)
+                    res = {}
+                for entry in res.get("gcode_store", []):
+                    if entry.get("type") == "response" and (since is None or entry.get("time", 0) > since):
+                        for line in str(entry.get("message", "")).splitlines():
+                            self.prompts.feed(line)
+                self.invalidate()
+            elif not self.printer.ready and replayed:
+                replayed = False
+                self.prompts.reset()
+                if self.printer.connected:
+                    since = time.time()
+            await asyncio.sleep(0.5)
+
     def dismiss_job(self) -> None:
         self._job_dismissed = True
         self.invalidate()
@@ -155,7 +228,7 @@ class App:
     async def services(self) -> None:
         """Background work that outlives display reconnects."""
         await asyncio.gather(self.history.run(self.printer, self.api, self.invalidate),
-                             self.settings.run(self.printer, self.api))
+                             self.settings.run(self.printer, self.api), self._replay_prompts())
 
     def _apply_settings(self) -> None:
         """Saved settings arrived (or were reset): use them, config as fallback."""
@@ -215,6 +288,8 @@ class App:
     def _gcode_response(self, line: str) -> None:
         if line.startswith("!!"):
             self.toast(line.lstrip("! ").strip(), "error", 5.0)
+        if any([self.prompts.feed(part) for part in line.splitlines()]):
+            self.invalidate()
         for fn in list(self._console_listeners):
             fn("response", line)
 
@@ -224,6 +299,13 @@ class App:
     def unlisten_console(self, fn) -> None:
         if fn in self._console_listeners:
             self._console_listeners.remove(fn)
+
+    def wake(self) -> None:
+        """Undim, as if the knob was touched."""
+        self.last_input = time.monotonic()
+        if self.dimmed:
+            self.dimmed = False
+            asyncio.ensure_future(self._set_backlight(self.brightness))
 
     async def beep(self, ms: int | None = None) -> None:
         try:
@@ -275,6 +357,9 @@ class App:
         self._sync_blocker()
         if self.printer.ready:
             self._sync_root()
+            self._sync_takeovers()
+        else:
+            self._tilt_results = None
         now = time.monotonic()
         if self._full:
             self.display.clear(t.BG)

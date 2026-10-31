@@ -133,6 +133,11 @@ class ListScreen(HeaderScreen):
         self.widgets.append(self.list)
         self.set_items(items or [])
 
+    def set_list_top(self, y: int) -> None:
+        """Start the list lower, leaving room for the screen's own widgets."""
+        x1, _, x2, y2 = self.list.area
+        self.list.area = (x1, y, x2, y2)
+
     def set_items(self, items: list[Item]) -> None:
         head = [Item("← Back", action=self.app.pop)] if self.back_row else []
         self.items = head + items

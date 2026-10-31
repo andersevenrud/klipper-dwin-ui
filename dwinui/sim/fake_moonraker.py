@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import bisect
 import logging
 import math
 import re
@@ -38,11 +39,45 @@ DEVICES = {
     "output_pin _beeper": {"value": 0.0},
     "neopixel toolhead": {"color_data": [[0.0, 0.0, 0.0, 0.0]]},
 }
+SCREWS = {"screw1": [30, 30], "screw1_name": "front left", "screw2": [200, 30],
+          "screw2_name": "front right", "screw3": [200, 200], "screw3_name": "rear right",
+          "screw4": [30, 200], "screw4_name": "rear left"}
 CONFIG_SETTINGS = {
     "output_pin caselight": {"pwm": True, "scale": 1.0},
     "output_pin relay": {"pwm": False, "scale": 1.0},
     "output_pin _beeper": {"pwm": True, "scale": 1.0},
+    "screws_tilt_adjust": dict(SCREWS),
+    "bed_screws": dict(SCREWS),
+    "stepper_z": {"position_endstop": 0.0},
 }
+# What SCREWS_TILT_CALCULATE reports, screw1 being the reference.
+SCREWS_TILT = {
+    "screw1": {"z": 2.481, "sign": "CW", "adjust": "00:00", "is_base": True},
+    "screw2": {"z": 2.532, "sign": "CW", "adjust": "00:18", "is_base": False},
+    "screw3": {"z": 2.317, "sign": "CCW", "adjust": "01:02", "is_base": False},
+    "screw4": {"z": 2.469, "sign": "CW", "adjust": "00:04", "is_base": False},
+}
+
+
+def fake_mesh(n: int = 7, tilt: float = 0.0) -> list[list[float]]:
+    """A slightly warped bed: a bowl, a tilt towards the back and a ripple."""
+    return [[round(0.09 * ((x - (n - 1) / 2) / (n / 2)) ** 2 - (0.06 + tilt) * y / (n - 1)
+                   + 0.015 * math.sin(x * 1.3 + y), 4) for x in range(n)] for y in range(n)]
+
+
+MESH_PARAMS = {"min_x": 20.0, "max_x": 210.0, "min_y": 20.0, "max_y": 210.0, "x_count": 7, "y_count": 7}
+# A macro prompt, as a filament runout macro might show it.
+PROMPT_DEMO = [
+    "action:prompt_begin Filament runout",
+    "action:prompt_text The filament ran out at layer 42. Load new filament, then resume.",
+    "action:prompt_button Load filament|M117 Loading filament",
+    "action:prompt_button Unload filament|M117 Unloading filament",
+    "action:prompt_footer_button Resume|RESPOND TYPE=command MSG=action:prompt_end|primary",
+    "action:prompt_footer_button Cancel print|RESPOND TYPE=command MSG=action:prompt_end|error",
+    "action:prompt_show",
+]
+# Seconds these take on the fake printer.
+SLOW = {"BED_MESH_CALIBRATE": 3.0, "SCREWS_TILT_CALCULATE": 2.0}
 # Moonraker [power] devices. "printer" behaves like the printer's supply:
 # off makes the MCU unreachable, on brings Klipper back.
 POWER = {
@@ -51,7 +86,7 @@ POWER = {
                "type": "tplink_smartplug"},
 }
 MACROS = ["PRINT_START", "PRINT_END", "LOAD_FILAMENT", "UNLOAD_FILAMENT", "BED_MESH_CALIBRATE",
-          "_HOMING_VARS", "PARK"]
+          "_HOMING_VARS", "PARK", "PROMPT_DEMO"]
 
 
 class FakeMoonraker:
@@ -70,6 +105,8 @@ class FakeMoonraker:
         self.gcode_log: list[str] = []
         self.calls: list[tuple[str, dict]] = []
         self._print_total = 0.0
+        self._probe_past: list[float] = []       # TESTZ heights tried, like Klipper's
+        self._probe_kind = ""
         now = time.time()
         self.files = {path: now - age for path, age, _, _ in FILES}      # path -> mtime
         # Print history, newest first, with repeats and failures like a real one.
@@ -106,6 +143,15 @@ class FakeMoonraker:
             "configfile": {"settings": CONFIG_SETTINGS, "save_config_pending": False,
                            "save_config_pending_items": {}},
             "probe": {"name": "probe", "last_z_result": 0.0},
+            "manual_probe": {"is_active": False, "z_position": None, "z_position_lower": None,
+                             "z_position_upper": None},
+            "bed_screws": {"is_active": False, "state": None, "current_screw": 0, "accepted_screws": 0},
+            "screws_tilt_adjust": {"error": False, "max_deviation": None, "results": {}},
+            "bed_mesh": {"profile_name": "", "mesh_matrix": [[]], "mesh_min": [0.0, 0.0],
+                         "mesh_max": [0.0, 0.0],
+                         "profiles": {"default": {"points": fake_mesh(), "mesh_params": MESH_PARAMS},
+                                      "pei_sheet": {"points": fake_mesh(tilt=0.04),
+                                                    "mesh_params": MESH_PARAMS}}},
         }
 
     async def run(self) -> None:
@@ -368,6 +414,9 @@ class FakeMoonraker:
         try:
             for line in script.splitlines():
                 self.gcode_log.append(line)
+                cmd = line.split()[0].upper() if line.strip() else ""
+                if cmd in SLOW:
+                    await asyncio.sleep(SLOW[cmd] / self.speedup)
                 self._gcode(line.strip())
         except RPCError as e:
             # Klipper also broadcasts the error as a gcode response.
@@ -375,6 +424,84 @@ class FakeMoonraker:
             self.on_gcode_response(f"!! {e}")
             raise
         return "ok"
+
+    def _respond(self, text: str) -> None:
+        self._store("response", text)
+        self.on_gcode_response(text)
+
+    def _need_homed(self) -> None:
+        if not set(self.printer.homed_axes) >= set("xyz"):
+            raise RPCError("Must home axis first: 0.000 0.000 0.000 [0.000]", 400)
+
+    def _probe_status(self, z: float) -> None:
+        """Klipper's report_z_status: the nearest heights tried below and above."""
+        past = self._probe_past
+        i = bisect.bisect_left(past, z)
+        j = i + 1 if i < len(past) and past[i] == z else i
+        self.printer.update({"manual_probe": {
+            "is_active": True, "z_position": z,
+            "z_position_lower": past[i - 1] if i > 0 else None,
+            "z_position_upper": past[j] if j < len(past) else None}})
+
+    def _testz(self, req: str) -> None:
+        if not self.printer.get("manual_probe", "is_active"):
+            raise RPCError('Unknown command:"TESTZ"', 400)
+        z = self.printer.get("manual_probe", "z_position")
+        past = self._probe_past
+        i = bisect.bisect_left(past, z)
+        if i >= len(past) or past[i] != z:
+            past.insert(i, z)
+        if req in ("+", "++"):
+            check = past[i + 1] if i < len(past) - 1 else 1e12
+            nxt = min((check + z) / 2 if req == "+" else check, z + 0.2)
+        elif req in ("-", "--"):
+            check = past[i - 1] if i > 0 else -1e12
+            nxt = max((check + z) / 2 if req == "-" else check, z - 0.2)
+        else:
+            nxt = z + float(req)
+        self._probe_status(round(nxt, 4))
+
+    def _probe_finish(self, accept: bool) -> None:
+        z = self.printer.get("manual_probe", "z_position") or 0.0
+        self.printer.update({"manual_probe": {"is_active": False, "z_position": None,
+                                              "z_position_lower": None, "z_position_upper": None}})
+        if not accept or self._probe_kind == "MANUAL_PROBE":
+            return
+        section, option = (("probe", "z_offset") if self._probe_kind == "PROBE_CALIBRATE"
+                           else ("stepper_z", "position_endstop"))
+        self.printer.update({"configfile": {"save_config_pending": True,
+                                            "save_config_pending_items": {section: {option: f"{z:.3f}"}}}})
+        self._respond(f"// {section}: {option}: {z:.3f}\n// The SAVE_CONFIG command will update "
+                      "the printer config file\n// with the above and restart the printer.")
+
+    def _bed_screws(self, cmd: str) -> None:
+        """Klipper's bed_screws: ACCEPT/ADJUSTED walk the screws, a coarse pass
+        until all four are accepted in a row, then a fine pass."""
+        bs = dict(self.printer.status["bed_screws"])
+        count = 4
+        if cmd == "ABORT":
+            bs = {"is_active": False, "state": None, "current_screw": 0, "accepted_screws": 0}
+        else:
+            bs["accepted_screws"] = bs["accepted_screws"] + 1 if cmd == "ACCEPT" else 0
+            if bs["current_screw"] + 1 < count and bs["accepted_screws"] < count:
+                bs["current_screw"] += 1
+            elif bs["accepted_screws"] < count:
+                bs["state"], bs["current_screw"] = "adjust", 0
+            elif bs["state"] == "adjust":
+                bs.update(state="fine", current_screw=0, accepted_screws=0)
+            else:
+                bs = {"is_active": False, "state": None, "current_screw": 0, "accepted_screws": 0}
+                self._respond("// Bed screws tool completed successfully")
+        self.printer.update({"bed_screws": bs})
+
+    def _load_mesh(self, name: str) -> None:
+        profiles = self.printer.get("bed_mesh", "profiles", {})
+        if name not in profiles:
+            raise RPCError(f"bed_mesh: Unknown profile [{name}]", 400)
+        mp = profiles[name]["mesh_params"]
+        self.printer.update({"bed_mesh": {"profile_name": name, "mesh_matrix": profiles[name]["points"],
+                                          "mesh_min": [mp["min_x"], mp["min_y"]],
+                                          "mesh_max": [mp["max_x"], mp["max_y"]]}})
 
     def _store(self, kind: str, message: str) -> None:
         self.gcode_store.append({"message": message, "time": time.time(), "type": kind})
@@ -418,6 +545,50 @@ class FakeMoonraker:
             origin = list(pr.get("gcode_move", "homing_origin", [0, 0, 0, 0]))
             origin[2] = round(origin[2] + float(words.get("Z_ADJUST", 0)), 3)
             pr.update({"gcode_move": {"homing_origin": origin}})
+        elif cmd == "RESPOND":
+            m = re.search(r'MSG="([^"]*)"|MSG=(.*)$', line, re.I)
+            kind = words.get("TYPE", "ECHO").lower()
+            prefix = {"command": "//", "error": "!!"}.get(kind, "echo:")
+            self._respond(f"{prefix} {(m.group(1) or m.group(2) or '').strip() if m else ''}")
+        elif cmd == "PROMPT_DEMO":
+            for message in PROMPT_DEMO:
+                self._respond(f"// {message}")
+        elif cmd in ("PROBE_CALIBRATE", "Z_ENDSTOP_CALIBRATE", "MANUAL_PROBE"):
+            self._need_homed()
+            if pr.get("manual_probe", "is_active"):
+                raise RPCError("Already in a manual Z probe. Use ABORT to abort it.", 400)
+            self._probe_kind, self._probe_past = cmd, []
+            self._probe_status(5.0)
+        elif cmd == "TESTZ":
+            self._testz(line.partition("=")[2].strip())
+        elif cmd in ("ACCEPT", "ADJUSTED", "ABORT"):
+            if pr.get("manual_probe", "is_active"):
+                if cmd == "ADJUSTED":
+                    raise RPCError('Unknown command:"ADJUSTED"', 400)
+                self._probe_finish(cmd == "ACCEPT")
+            elif pr.get("bed_screws", "is_active"):
+                self._bed_screws(cmd)
+            else:
+                raise RPCError(f'Unknown command:"{cmd}"', 400)
+        elif cmd == "BED_SCREWS_ADJUST":
+            self._need_homed()
+            pr.update({"bed_screws": {"is_active": True, "state": "adjust", "current_screw": 0,
+                                      "accepted_screws": 0}})
+        elif cmd == "SCREWS_TILT_CALCULATE":
+            self._need_homed()
+            pr.update({"screws_tilt_adjust": {"error": False, "results": dict(SCREWS_TILT)}})
+        elif cmd == "BED_MESH_CALIBRATE":
+            self._need_homed()
+            profiles = dict(pr.get("bed_mesh", "profiles", {}))
+            profiles["default"] = {"points": fake_mesh(tilt=0.01), "mesh_params": MESH_PARAMS}
+            pr.update({"bed_mesh": {"profiles": profiles}})
+            self._load_mesh("default")
+            pr.update({"configfile": {"save_config_pending": True,
+                                      "save_config_pending_items": {"bed_mesh default": {}}}})
+        elif cmd == "BED_MESH_PROFILE" and "LOAD" in words:
+            self._load_mesh(line.partition("=")[2].strip())
+        elif cmd == "BED_MESH_CLEAR":
+            pr.update({"bed_mesh": {"profile_name": "", "mesh_matrix": [[]]}})
         elif cmd == "M117":
             pr.update({"display_status": {"message": line[4:].strip() or None}})
         elif cmd == "M84":

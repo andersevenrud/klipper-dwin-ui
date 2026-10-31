@@ -31,7 +31,11 @@ def to_jpeg(png: bytes, size: int, background: tuple[int, int, int]) -> bytes:
     img.thumbnail((size, size), Image.LANCZOS)
     canvas = Image.new("RGBA", (size, size), (*background, 255))
     canvas.alpha_composite(img, ((size - img.width) // 2, (size - img.height) // 2))
-    rgb = canvas.convert("RGB")
+    return encode(canvas.convert("RGB"))
+
+
+def encode(rgb) -> bytes:
+    """A PIL RGB image -> a baseline JPEG the panel can decode."""
     for quality in range(85, 50, -5):
         buf = io.BytesIO()
         rgb.save(buf, "JPEG", quality=quality, subsampling=2, progressive=False)
