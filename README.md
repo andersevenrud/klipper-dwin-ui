@@ -15,6 +15,7 @@ without Marlin and without a Klipper fork.
 - **Printing screen** while a job runs: the slicer's thumbnail, layer and
   height, progress, time left and finish time, temperatures, live speed and
   volumetric flow, fan, Z offset and filament used.
+- **Messages** from `M117` pop up briefly at the bottom of the screen.
 - **Menus:**
   - **Print:** browse folders and start a print from a preview with the
     slicer's thumbnail, print time and filament. Recent prints (from

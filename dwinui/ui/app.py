@@ -65,8 +65,10 @@ class App:
         self.brightness = cfg.brightness
         self._last_reply = time.monotonic()
         self.panel_lost = False
+        self._message: str | None = None   # last M117 seen; None until ready
 
         printer.listen(self.invalidate)
+        printer.listen(self._watch_message)
         api.on_error = lambda msg: self.toast(msg, "error")
         api.on_gcode_response = self._gcode_response
 
@@ -193,6 +195,22 @@ class App:
         if level == "error":
             asyncio.ensure_future(self.beep(120))
         self.invalidate()
+
+    def _watch_message(self) -> None:
+        """Pop up M117 messages. The one already set when we (re)connect is old
+        news, and the printing screen shows them in place."""
+        from .screens.printing import PrintingScreen
+
+        if not self.printer.ready:
+            self._message = None
+            return
+        message = self.printer.get("display_status", "message", "") or ""
+        if self._message is None or message == self._message:
+            self._message = message
+            return
+        self._message = message
+        if message and self.cfg.message_seconds > 0 and not isinstance(self.top, PrintingScreen):
+            self.toast(message, seconds=self.cfg.message_seconds)
 
     def _gcode_response(self, line: str) -> None:
         if line.startswith("!!"):

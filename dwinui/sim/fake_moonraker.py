@@ -418,6 +418,8 @@ class FakeMoonraker:
             origin = list(pr.get("gcode_move", "homing_origin", [0, 0, 0, 0]))
             origin[2] = round(origin[2] + float(words.get("Z_ADJUST", 0)), 3)
             pr.update({"gcode_move": {"homing_origin": origin}})
+        elif cmd == "M117":
+            pr.update({"display_status": {"message": line[4:].strip() or None}})
         elif cmd == "M84":
             pr.update({"toolhead": {"homed_axes": ""}})
         elif cmd == "SET_FAN_SPEED":
