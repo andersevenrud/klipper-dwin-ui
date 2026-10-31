@@ -112,6 +112,14 @@ class Printer:
         return float(origin[2]) if len(origin) > 2 else 0.0
 
     @property
+    def has_probe(self) -> bool:
+        return "probe" in self.objects
+
+    @property
+    def save_config_pending(self) -> bool:
+        return bool(self.get("configfile", "save_config_pending", False))
+
+    @property
     def homed_axes(self) -> str:
         return self.get("toolhead", "homed_axes", "")
 

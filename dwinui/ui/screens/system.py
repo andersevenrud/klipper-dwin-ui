@@ -16,6 +16,9 @@ class SystemScreen(ListScreen):
         self.set_items([
             Item("Emergency stop", action=self._estop),
             Item("Console", action=self._console),
+            Item("Save config", value=lambda: "pending" if self.printer.save_config_pending else "",
+                 action=self._save_config,
+                 enabled=lambda: self.printer.save_config_pending and not self.printer.job_active),
             Item("Firmware restart", action=lambda: self._confirm(
                 "Firmware restart?", "Restarts Klipper and all MCUs.", "printer.firmware_restart")),
             Item("Restart Klipper", action=lambda: self._confirm(
@@ -33,6 +36,10 @@ class SystemScreen(ListScreen):
                  enabled=lambda: bool(self.app.settings.values)),
             Item("Version", value=lambda: __version__),
         ])
+
+    def _save_config(self) -> None:
+        self._confirm("Save config?", "Writes pending changes to printer.cfg and restarts Klipper.",
+                      "printer.gcode.script", script="SAVE_CONFIG")
 
     def _console(self) -> None:
         from .console import ConsoleScreen
@@ -63,6 +70,7 @@ class SystemScreen(ListScreen):
         else:
             self.api.fire("printer.emergency_stop")
 
-    def _confirm(self, title: str, message: str, method: str, default_ok: bool = False) -> None:
-        self.app.push(Confirm(self.app, title, message, lambda: self.api.fire(method),
+    def _confirm(self, title: str, message: str, method: str, default_ok: bool = False,
+                 **params) -> None:
+        self.app.push(Confirm(self.app, title, message, lambda: self.api.fire(method, **params),
                               ok="Yes", danger=True, default_ok=default_ok))

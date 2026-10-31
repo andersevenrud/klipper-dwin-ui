@@ -102,7 +102,9 @@ class FakeMoonraker:
                       if name.startswith("temperature_fan") else {"temperature": temp})
                for name, temp in SENSORS.items()},
             **{name: dict(status) for name, status in DEVICES.items()},
-            "configfile": {"settings": CONFIG_SETTINGS},
+            "configfile": {"settings": CONFIG_SETTINGS, "save_config_pending": False,
+                           "save_config_pending_items": {}},
+            "probe": {"name": "probe", "last_z_result": 0.0},
         }
 
     async def run(self) -> None:
@@ -417,6 +419,17 @@ class FakeMoonraker:
             pr.update({f"fan_generic {words['FAN'].lower()}": {"speed": float(words["SPEED"])}})
         elif cmd == "SET_PIN":
             pr.update({f"output_pin {words['PIN'].lower()}": {"value": float(words["VALUE"])}})
+        elif cmd in ("Z_OFFSET_APPLY_PROBE", "Z_OFFSET_APPLY_ENDSTOP"):
+            offset = round(2.0 - pr.z_offset, 3)          # probe z_offset 2.000 before
+            section = "probe" if cmd.endswith("PROBE") else "stepper_z"
+            pr.update({"configfile": {"save_config_pending": True,
+                                      "save_config_pending_items": {section: {"z_offset": f"{offset:.3f}"}}}})
+            self._store("response", f"// {section}: z_offset: {offset:.3f}\n// The SAVE_CONFIG command "
+                                    "will update the printer config file\n// and restart the printer.")
+        elif cmd == "SAVE_CONFIG":
+            if pr.job_active:
+                raise RPCError("SAVE_CONFIG is not allowed while printing", 400)
+            asyncio.ensure_future(self._restart())
         elif cmd == "SET_LED":
             name = next(o for o in pr.status if o.split()[0] in ("led", "neopixel")
                         and o.split()[-1].upper() == words["LED"])

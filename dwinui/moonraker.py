@@ -192,8 +192,10 @@ class Moonraker:
         self.printer.objects = list(listing.get("objects", []))
         devices = [o for o in self.printer.objects if o.split()[0] in DEVICE_TYPES]
         names = dict.fromkeys([*SUBSCRIBE_OBJECTS, *sensors, *devices])
-        await self.call("printer.objects.subscribe", on_result=apply,
-                        objects={name: None for name in names})
+        objects: dict[str, list[str] | None] = {name: None for name in names}
+        # Only whether SAVE_CONFIG is pending; the full config would be large.
+        objects["configfile"] = ["save_config_pending", "save_config_pending_items"]
+        await self.call("printer.objects.subscribe", on_result=apply, objects=objects)
         log.info("subscribed to printer objects")
 
     async def _read_loop(self, ws: Any) -> None:

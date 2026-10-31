@@ -21,7 +21,9 @@ without Marlin and without a Klipper fork.
     the preview.
   - **Temperature:** set targets, or use a preheat preset.
   - **Move:** homing, and jogging with the knob.
-  - **Extrude**, and **Tune:** speed, flow, fan and Z babystepping.
+  - **Extrude**, and **Tune:** speed, flow, fan and Z babystepping, which
+    can be saved to the probe or Z endstop offset (`SAVE_CONFIG` waits until
+    the print is done).
   - **Fans:** set the part fan and any `fan_generic`, and see what the
     automatic fans are doing.
   - **Lights:** dim or switch `output_pin` lights and LEDs. The tile only
