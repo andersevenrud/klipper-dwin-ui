@@ -8,12 +8,13 @@ pack (run tools/build_assets.py first).
                                                       # -> docs/img/bed-mesh.png
     python tools/readme_screens.py                    # -> docs/img/screens.png
 
-The strip shows home, menu, print preview, printing and bed mesh.
+The strip shows home, menu, bed mesh, print preview and printing.
 Everything comes from the fake printer except the print preview and the bed
 mesh, which are taken from docs/img/print-preview.png and bed-mesh.png when
-they exist (a real slicer thumbnail and a real bed look better than fake
-ones). --preview and --mesh only read from the printer: file metadata, the
-thumbnail and the saved meshes.
+they exist, and the printing screen's thumbnail, from docs/img/print-thumb.png
+(a real slicer thumbnail and a real bed look better than fake ones).
+--preview saves both preview and thumbnail. --preview and --mesh only read
+from the printer: file metadata, the thumbnail and the saved meshes.
 """
 
 import argparse
@@ -26,6 +27,7 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from dwinui import thumbnails  # noqa: E402
 from dwinui.config import Config  # noqa: E402
 from dwinui.moonraker import Moonraker  # noqa: E402
 from dwinui.printer import Printer  # noqa: E402
@@ -42,6 +44,7 @@ SCALE = 2
 
 PREVIEW = ROOT / "docs" / "img" / "print-preview.png"
 MESH = ROOT / "docs" / "img" / "bed-mesh.png"
+THUMB = ROOT / "docs" / "img" / "print-thumb.png"
 
 
 async def capture() -> list[Image.Image]:
@@ -50,11 +53,24 @@ async def capture() -> list[Image.Image]:
     shots = []
     cfg = Config(long_press_ms=150, dim_timeout=0, custom_assets=True)
     async with Harness(cfg, BUILT_ASSETS) as h:
+        if THUMB.exists():
+            fake_fetch = h.api.fetch_file
+
+            async def fetch_file(root: str, path: str) -> bytes:
+                return THUMB.read_bytes() if "3DBenchy" in path else await fake_fetch(root, path)
+            h.api.fetch_file = fetch_file
         await h.settle(0.6)
         shots.append(h.link.canvas.snapshot(SCALE))          # home
         await h.click()
         await h.rotate(1)
         shots.append(h.link.canvas.snapshot(SCALE))          # menu, Temp selected
+        if MESH.exists():
+            shots.append(Image.open(MESH).convert("RGB"))
+        else:
+            h.app.push(BedMeshScreen(h.app))
+            await h.settle(1.0)
+            shots.append(h.link.canvas.snapshot(SCALE))      # bed mesh (fake)
+            await h.back()
         if PREVIEW.exists():
             shots.append(Image.open(PREVIEW).convert("RGB"))
         else:
@@ -67,14 +83,6 @@ async def capture() -> list[Image.Image]:
         await h.api.call("printer.print.start", filename="3DBenchy_PLA_31m20s.gcode")
         await h.settle(12)                                   # let the demo print progress
         shots.append(h.link.canvas.snapshot(SCALE))          # printing
-        if MESH.exists():
-            shots.append(Image.open(MESH).convert("RGB"))
-        else:
-            h.app.dismiss_job()
-            await h.api.call("printer.print.cancel")
-            h.app.push(BedMeshScreen(h.app))
-            await h.settle(1.0)
-            shots.append(h.link.canvas.snapshot(SCALE))      # bed mesh (fake)
     return shots
 
 
@@ -117,6 +125,9 @@ async def capture_preview(url: str, filename: str) -> Image.Image:
         await asyncio.sleep(2)
         if not app.top.thumb.jpeg:
             raise SystemExit(f"{filename} has no usable thumbnail")
+        rel = thumbnails.pick(meta | {"filename": filename}, 100)
+        THUMB.write_bytes(await app.api.fetch_file("gcodes", rel))
+        print(f"-> {THUMB.relative_to(ROOT)} ({THUMB.stat().st_size // 1024} KB)")
     return await on_printer(url, show)
 
 

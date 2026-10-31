@@ -6,7 +6,7 @@ A KlipperScreen-like interface for the stock **Ender 3 V2 display**, running
 against Klipper through Moonraker. The display, knob and beeper work again,
 without Marlin and without a Klipper fork.
 
-![Home screen, menu, print preview, printing screen and bed mesh](docs/img/screens.png)
+![Home screen, menu, bed mesh, print preview and printing screen](docs/img/screens.png)
 
 ## Features
 

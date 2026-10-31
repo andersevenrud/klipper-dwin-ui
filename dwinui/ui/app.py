@@ -361,7 +361,8 @@ class App:
         else:
             self._tilt_results = None
         now = time.monotonic()
-        if self._full:
+        full = self._full
+        if full:
             self.display.clear(t.BG)
             self._full = False
             self._toast_drawn = False
@@ -371,6 +372,14 @@ class App:
             self.display.forget("toast")
 
         screen = self.top
+        if full and screen.modal:
+            # A dialog only draws its own box; after a clear, the screen
+            # behind it has to be drawn again too.
+            below = self._below(screen)
+            below.refresh()
+            for widget in below.widgets:
+                for key, area, frames in widget.parts():
+                    self.display.draw(key, area, frames)
         screen.refresh()
         under_toast = False
         for widget in screen.widgets:
@@ -396,6 +405,14 @@ class App:
                 frames.append(p.text(x1 + 8, ly + i * 20, line, 1, t.FG, bg))
             self.display.draw("toast", t.TOAST_RECT, frames)
             self._toast_drawn = True
+
+    def _below(self, screen: Screen) -> Screen:
+        """The nearest full screen under a dialog."""
+        screens = [self.blocker, *self.over_blocker] if self.blocker else self.stack
+        i = screens.index(screen)
+        while i > 0 and screens[i].modal:
+            i -= 1
+        return screens[i]
 
     async def render_loop(self) -> None:
         while True:

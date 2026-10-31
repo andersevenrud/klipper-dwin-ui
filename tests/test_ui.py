@@ -215,3 +215,19 @@ def test_printing_screen_layers_speed_flow_and_thumbnail():
             screen.refresh()
             assert screen.layer.value == "200 / 200"
     run(go())
+
+
+def test_full_redraw_keeps_the_screen_behind_a_dialog():
+    from dwinui import protocol as p
+    from dwinui.ui import theme as t
+    from dwinui.ui.screen import Confirm
+
+    async def go():
+        async with Harness(Config(long_press_ms=150, dim_timeout=0)) as h:
+            await h.settle(0.3)
+            h.app.push(Confirm(h.app, "Sure?", "", lambda: None))
+            h.app.redraw()                                     # e.g. the panel came back
+            await h.settle(0.3)
+            header = h.link.canvas.snapshot().getpixel((2, 2))
+            assert header == p.rgb565_to_rgb(t.HEADER_BG)
+    run(go())
