@@ -145,8 +145,18 @@ class Moonraker:
             params["api_key"] = self.api_key
         await self.call("server.connection.identify", **params)
         self.printer.connected = True
+        await self._load_power_devices()
         self.printer.changed()
         await self._klippy_monitor()
+
+    async def _load_power_devices(self) -> None:
+        """Moonraker [power] devices; none if the power component isn't loaded."""
+        try:
+            res = await self.call("machine.device_power.devices")
+        except RPCError:
+            self.printer.power = {}
+            return
+        self.printer.power = {d["device"]: d for d in res.get("devices", []) if "device" in d}
 
     async def _klippy_monitor(self) -> None:
         """Poll Klippy until ready, subscribe, then wait for it to drop."""
@@ -223,3 +233,8 @@ class Moonraker:
             self._ready_event.set()
         elif method == "notify_gcode_response" and params:
             self.on_gcode_response(str(params[0]))
+        elif method == "notify_power_changed" and params:
+            device = params[0]
+            if isinstance(device, dict) and "device" in device:
+                self.printer.power[device["device"]] = device
+                self.printer.changed()

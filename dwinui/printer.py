@@ -28,6 +28,11 @@ def sensor_label(name: str) -> str:
     return " ".join(w[:1].upper() + w[1:] for w in words)
 
 
+def device_label(name: str) -> str:
+    """Moonraker power device name -> label: 'printer_psu' -> 'Printer Psu'."""
+    return " ".join(w[:1].upper() + w[1:] for w in name.replace("_", " ").split())
+
+
 def _heater_order(name: str) -> tuple[int, str]:
     return (0 if name.startswith("extruder") else 1 if name == "heater_bed" else 2, name)
 
@@ -39,6 +44,8 @@ class Printer:
         self.state_message = ""
         self.status: dict[str, dict[str, Any]] = {}
         self.objects: list[str] = []     # every object Klipper has (printer.objects.list)
+        # Moonraker [power] devices: name -> {"status": "on"|"off"|..., "locked_while_printing": bool}
+        self.power: dict[str, dict[str, Any]] = {}
         self._listeners: list[Callable[[], None]] = []
 
     def listen(self, fn: Callable[[], None]) -> None:
@@ -114,6 +121,16 @@ class Printer:
         found = [o for o in self.objects
                  if o.split()[0] in types and not o.split()[-1].startswith("_")]
         return sorted(found, key=lambda o: (o != "fan", sensor_label(o).lower()))
+
+    def printer_supplies(self) -> list[str]:
+        """Power devices that feed the printer: the ones locked while printing,
+        which is how a printer's supply is normally set up. If none is marked
+        that way, all devices (we can't tell them apart)."""
+        locked = [n for n, d in self.power.items() if d.get("locked_while_printing")]
+        return sorted(locked or self.power)
+
+    def power_locked(self, name: str) -> bool:
+        return bool(self.power.get(name, {}).get("locked_while_printing")) and self.job_active
 
     @property
     def heater_names(self) -> list[str]:

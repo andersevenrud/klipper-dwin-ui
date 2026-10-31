@@ -42,6 +42,13 @@ CONFIG_SETTINGS = {
     "output_pin relay": {"pwm": False, "scale": 1.0},
     "output_pin _beeper": {"pwm": True, "scale": 1.0},
 }
+# Moonraker [power] devices. "printer" behaves like the printer's supply:
+# off makes the MCU unreachable, on brings Klipper back.
+POWER = {
+    "printer": {"device": "printer", "status": "on", "locked_while_printing": True, "type": "gpio"},
+    "lights": {"device": "lights", "status": "off", "locked_while_printing": False,
+               "type": "tplink_smartplug"},
+}
 MACROS = ["PRINT_START", "PRINT_END", "LOAD_FILAMENT", "UNLOAD_FILAMENT", "BED_MESH_CALIBRATE",
           "_HOMING_VARS", "PARK"]
 
@@ -84,6 +91,7 @@ class FakeMoonraker:
         self.printer.connected = True
         self.printer.replace(self._initial())
         self.printer.objects = list(self.printer.status) + [f"gcode_macro {m}" for m in MACROS]
+        self.printer.power = {name: dict(device) for name, device in POWER.items()}
         last = time.monotonic()
         while True:
             await asyncio.sleep(0.5)
@@ -254,6 +262,26 @@ class FakeMoonraker:
             self.printer.replace(self._initial())
         asyncio.ensure_future(back())
         return "ok"
+
+    async def _m_machine_device_power_devices(self) -> dict:
+        return {"devices": [dict(d) for d in self.printer.power.values()]}
+
+    async def _m_machine_device_power_post_device(self, device: str, action: str) -> dict:
+        if device not in self.printer.power:
+            raise RPCError(f"No valid power device named {device}", 404)
+        if self.printer.power_locked(device):
+            raise RPCError(f"Unable to change power for {device} while printing", 400)
+        state = {"on": "on", "off": "off"}.get(action) or (
+            "off" if self.printer.power[device]["status"] == "on" else "on")
+        self.printer.power[device]["status"] = state
+        self.printer.changed()
+        if device == "printer":
+            if state == "off":
+                self.printer.status = {}
+                self.printer.set_state("error", "mcu 'mcu': Unable to connect")
+            else:
+                await self._restart()
+        return {device: state}
 
     async def _m_machine_reboot(self) -> str:
         return "ok"

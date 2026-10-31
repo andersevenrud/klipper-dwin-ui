@@ -23,12 +23,21 @@ class SystemScreen(ListScreen):
                 "Reboot host?", "The Raspberry Pi will reboot.", "machine.reboot")),
             Item("Shutdown host", action=lambda: self._confirm(
                 "Shutdown host?", "The Raspberry Pi will power off.", "machine.shutdown")),
+            *([Item("Power", value=self._power_summary, action=self._power)] if self.printer.power else []),
             Item("Brightness", value=lambda: f"{self.app.brightness}",
                  edit=NumberEdit(lambda: self.app.brightness,
                                  lambda v: asyncio.ensure_future(self.app.set_brightness(int(v))),
                                  8, 255, step=8)),
             Item("Version", value=lambda: __version__),
         ])
+
+    def _power_summary(self) -> str:
+        n = len(self.printer.power)
+        return f"{n} device" + ("" if n == 1 else "s")
+
+    def _power(self) -> None:
+        from .power import PowerScreen
+        self.app.push(PowerScreen(self.app))
 
     def _estop(self) -> None:
         if self.cfg.confirm_estop:

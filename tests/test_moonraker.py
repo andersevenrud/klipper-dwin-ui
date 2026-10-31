@@ -85,6 +85,10 @@ def test_full_session_against_websocket_server():
                 method = msg["method"]
                 if method == "server.connection.identify":
                     result = {"connection_id": 1}
+                elif method == "machine.device_power.devices":   # component not loaded
+                    await ws.send(json.dumps({"jsonrpc": "2.0", "id": msg["id"],
+                                              "error": {"code": -32601, "message": "Method not found"}}))
+                    continue
                 elif method == "printer.info":
                     result = {"state": state["klippy"], "state_message": "Starting up"}
                     state["klippy"] = "ready"        # ready on the next poll
@@ -119,7 +123,7 @@ def test_full_session_against_websocket_server():
                 if "disconnected" in states[states.index("ready"):] if "ready" in states else False:
                     break
             task.cancel()
-        assert seen[:2] == ["server.connection.identify", "printer.info"]
+        assert seen[:3] == ["server.connection.identify", "machine.device_power.devices", "printer.info"]
         assert "startup" in states and "ready" in states
         assert printer.temp("extruder") == (25.0, 200.0)
         assert not printer.connected and printer.klippy_state == "disconnected"

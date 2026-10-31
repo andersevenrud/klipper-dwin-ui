@@ -25,7 +25,10 @@ without Marlin and without a Klipper fork.
   - **Lights:** dim or switch `output_pin` lights and LEDs. The tile only
     appears when the printer has lights.
   - **Macros**, and **System:** restarts, emergency stop, host power,
-    backlight.
+    backlight, and Moonraker power devices (`[power]`).
+- **When Klipper isn't ready**, the screen shows why and offers what helps:
+  restarts, and switching on or power-cycling the printer's supply if
+  Moonraker controls it.
 - **Knob controls:** turn, press, and hold to go back; see
   [Controls](#controls).
 - **Sharper font, icons and a Klipper boot logo**, flashed onto the display
