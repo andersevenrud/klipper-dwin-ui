@@ -11,8 +11,8 @@ class ExtrudeScreen(ListScreen):
 
     def __init__(self, app) -> None:
         super().__init__(app)
-        self.length = 10.0
-        self.speed = self.cfg.extrude_feedrate / 60
+        self.length = float(self.app.settings.get("extrude_length", 10.0))
+        self.speed = float(self.app.settings.get("extrude_speed", self.cfg.extrude_feedrate / 60))
         self.set_items([
             heater_item(self, "extruder"),
             Item("Length", value=lambda: f"{self.length:g} mm",
@@ -25,9 +25,11 @@ class ExtrudeScreen(ListScreen):
 
     def _set_length(self, v: float) -> None:
         self.length = v
+        self.app.settings.set(self.api, "extrude_length", v)
 
     def _set_speed(self, v: float) -> None:
         self.speed = v
+        self.app.settings.set(self.api, "extrude_speed", v)
 
     def _move(self, distance: float) -> None:
         temp, _ = self.printer.temp("extruder")

@@ -157,6 +157,12 @@ If the knob turns the wrong way, set `invert_encoder: true` under
 `[display]`. Everything else in `dwinui.conf` (preheat presets, dimming,
 feed rates) is commented.
 
+Settings you change on the display itself are remembered across restarts.
+That covers brightness, the jog step and the extrude length and speed.
+They're stored in Moonraker's database and take priority over
+`dwinui.conf`. **System → Reset display settings** goes back to the config
+file.
+
 ### Updates
 
 Add this to `moonraker.conf` to update dwinui from Mainsail/Fluidd:

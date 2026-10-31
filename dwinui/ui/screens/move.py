@@ -21,7 +21,8 @@ class MoveScreen(ListScreen):
 
     def __init__(self, app) -> None:
         super().__init__(app)
-        self.step = 1.0
+        saved = float(self.app.settings.get("jog_step", 1.0))
+        self.step = saved if saved in STEPS else 1.0
         self._pending = {a: 0.0 for a in AXES}
         self._worker: asyncio.Task | None = None
         items = [
@@ -49,6 +50,7 @@ class MoveScreen(ListScreen):
 
     def _next_step(self) -> None:
         self.step = STEPS[(STEPS.index(self.step) + 1) % len(STEPS)]
+        self.app.settings.set(self.api, "jog_step", self.step)
 
     def _motors_off(self) -> None:
         self.api.gcode_fire("M84")

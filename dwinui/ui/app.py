@@ -11,6 +11,8 @@ from ..assets import Assets
 from ..config import Config
 from ..display import Display, intersects
 from ..history import TempHistory
+from ..link import LinkClosed
+from ..settings import Settings
 from ..link import Link
 from ..printer import Printer
 from . import theme as t
@@ -42,6 +44,8 @@ class App:
         p.set_glyphs(self.assets.glyphs)
         self.display = Display(link, t.BG)
         self.history = TempHistory()
+        self.settings = Settings()
+        self.settings.listen(self._apply_settings)
         self.stack: list[Screen] = [DashboardScreen(self)]
         self._job_was_active = False
         self._job_seen = False          # a job ran while we watched
@@ -137,7 +141,23 @@ class App:
 
     async def services(self) -> None:
         """Background work that outlives display reconnects."""
-        await self.history.run(self.printer, self.api, self.invalidate)
+        await asyncio.gather(self.history.run(self.printer, self.api, self.invalidate),
+                             self.settings.run(self.printer, self.api))
+
+    def _apply_settings(self) -> None:
+        """Saved settings arrived (or were reset): use them, config as fallback."""
+        level = int(self.settings.get("brightness", self.cfg.brightness))
+        if level != self.brightness:
+            self.brightness = level
+            if not self.dimmed and not self.link.closed.is_set():
+                asyncio.ensure_future(self._set_backlight(level))
+        self.invalidate()
+
+    async def _set_backlight(self, level: int) -> None:
+        try:
+            await self.display.set_brightness(level)
+        except LinkClosed:
+            pass
 
     def _sync_blocker(self) -> None:
         from .screens.blocker import BlockerScreen
@@ -298,7 +318,9 @@ class App:
                 log.warning("display stopped answering (power glitch?)")
 
     async def set_brightness(self, level: int) -> None:
+        """Change the backlight from the display, and remember it."""
         self.brightness = level
+        self.settings.set(self.api, "brightness", level)
         await self.display.set_brightness(level)
 
     async def run(self) -> None:

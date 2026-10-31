@@ -55,9 +55,10 @@ MACROS = ["PRINT_START", "PRINT_END", "LOAD_FILAMENT", "UNLOAD_FILAMENT", "BED_M
 
 
 class FakeMoonraker:
-    def __init__(self, printer: Printer, speedup: float = 1.0) -> None:
+    def __init__(self, printer: Printer, speedup: float = 1.0, db: dict | None = None) -> None:
         self.printer = printer
         self.speedup = speedup
+        self.db: dict[str, dict] = db if db is not None else {}     # Moonraker's database
         self.on_error = lambda msg: None
         self.on_gcode_response = lambda line: None
         self.gcode_log: list[str] = []
@@ -325,6 +326,23 @@ class FakeMoonraker:
             else:
                 await self._restart()
         return {device: state}
+
+    async def _m_server_database_get_item(self, namespace: str, key: str | None = None) -> dict:
+        if namespace not in self.db:
+            raise RPCError(f"Namespace {namespace} not found", 404)
+        if key is None:
+            return {"namespace": namespace, "key": None, "value": dict(self.db[namespace])}
+        if key not in self.db[namespace]:
+            raise RPCError(f"Key '{key}' in namespace '{namespace}' not found", 404)
+        return {"namespace": namespace, "key": key, "value": self.db[namespace][key]}
+
+    async def _m_server_database_post_item(self, namespace: str, key: str, value) -> dict:
+        self.db.setdefault(namespace, {})[key] = value
+        return {"namespace": namespace, "key": key, "value": value}
+
+    async def _m_server_database_delete_item(self, namespace: str, key: str) -> dict:
+        value = self.db.get(namespace, {}).pop(key, None)
+        return {"namespace": namespace, "key": key, "value": value}
 
     async def _m_machine_reboot(self) -> str:
         return "ok"

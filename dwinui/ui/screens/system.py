@@ -28,8 +28,20 @@ class SystemScreen(ListScreen):
                  edit=NumberEdit(lambda: self.app.brightness,
                                  lambda v: asyncio.ensure_future(self.app.set_brightness(int(v))),
                                  8, 255, step=8)),
+            Item("Reset display settings", action=self._reset_settings,
+                 enabled=lambda: bool(self.app.settings.values)),
             Item("Version", value=lambda: __version__),
         ])
+
+    def _reset_settings(self) -> None:
+        def reset() -> None:
+            async def run() -> None:
+                await self.app.settings.reset(self.api)
+                self.app.toast("Display settings reset")
+            asyncio.ensure_future(run())
+        self.app.push(Confirm(self.app, "Reset settings?",
+                              "Brightness, jog step and extrude values go back to dwinui.conf.",
+                              reset, ok="Reset"))
 
     def _power_summary(self) -> str:
         n = len(self.printer.power)

@@ -17,10 +17,11 @@ BUILT_ASSETS = Path(__file__).resolve().parents[2] / "build" / "DWIN_SET"
 
 
 class Harness:
-    def __init__(self, cfg: Config | None = None, assets: Path | None = None) -> None:
+    def __init__(self, cfg: Config | None = None, assets: Path | None = None,
+                 db: dict | None = None) -> None:
         self.cfg = cfg or Config(long_press_ms=150, dim_timeout=0)
         self.printer = Printer()
-        self.api = FakeMoonraker(self.printer)
+        self.api = FakeMoonraker(self.printer, db=db)
         self.link = SimLink(Canvas(assets))
         self.app = App(self.cfg, self.link, self.api, self.printer)
         self._tasks: list[asyncio.Task] = []

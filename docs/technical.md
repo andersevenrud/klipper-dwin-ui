@@ -77,6 +77,13 @@ boot screen, and only changed values would be redrawn on top of it.
   normal reconnect path redraws everything. Both paths were tested by
   pulling the panel's 5V wire.
 
+**Settings.** Values changed on the display (backlight, jog step, extrude
+length and speed) are saved in the `dwinui` namespace of Moonraker's
+database (`server.database.post_item`). They are loaded whole
+(`get_item` without a key) after every connect; a missing namespace means
+nothing is saved yet. Saved values win over `dwinui.conf`, and System →
+Reset display settings deletes them.
+
 **Backends.** Everything that touches hardware goes through `Link`. A new
 backend only has to fill the `frames` and `inputs` queues and implement
 `write()`. `SerialLink` uses plain pyserial with a reader thread and a
