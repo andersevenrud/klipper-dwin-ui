@@ -1,11 +1,11 @@
-"""Live print tuning: speed, flow, fan, babystepping, temperatures."""
+"""Live print tuning: speed, flow and babystepping. Temperatures and fans
+have their own screens."""
 
 from __future__ import annotations
 
 import asyncio
 
 from ..screen import Adjust, Confirm, Item, ListScreen, NumberEdit
-from .common import heater_item
 
 
 class TuneScreen(ListScreen):
@@ -18,7 +18,6 @@ class TuneScreen(ListScreen):
         pr = self.printer
         speed = lambda: pr.get("gcode_move", "speed_factor", 1.0) * 100  # noqa: E731
         flow = lambda: pr.get("gcode_move", "extrude_factor", 1.0) * 100  # noqa: E731
-        fan = lambda: pr.get("fan", "speed", 0.0) * 100  # noqa: E731
         self.set_items([
             Item("Speed", value=lambda: f"{speed():.0f}%",
                  edit=NumberEdit(speed, lambda v: self.api.gcode_fire(f"M220 S{v:.0f}"),
@@ -26,15 +25,10 @@ class TuneScreen(ListScreen):
             Item("Flow", value=lambda: f"{flow():.0f}%",
                  edit=NumberEdit(flow, lambda v: self.api.gcode_fire(f"M221 S{v:.0f}"),
                                  50, 150, step=1, fmt="{:.0f}%")),
-            Item("Fan", value=lambda: f"{fan():.0f}%",
-                 edit=NumberEdit(fan, lambda v: self.api.gcode_fire(f"M106 S{round(v * 2.55)}"),
-                                 0, 100, step=5, fmt="{:.0f}%")),
             Item("Z offset", value=lambda: f"{pr.z_offset:+.3f}",
                  edit=Adjust(self._babystep, lambda: f"{pr.z_offset + self._z_pending:+.3f}")),
             Item("Save Z offset", action=self._save_offset,
                  enabled=lambda: abs(pr.z_offset) >= 0.0005),
-            heater_item(self, "extruder"),
-            heater_item(self, "heater_bed"),
         ])
 
     def _save_offset(self) -> None:
