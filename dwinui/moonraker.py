@@ -195,6 +195,9 @@ class Moonraker:
         objects: dict[str, list[str] | None] = {name: None for name in names}
         # Only whether SAVE_CONFIG is pending; the full config would be large.
         objects["configfile"] = ["save_config_pending", "save_config_pending_items"]
+        # Live toolhead and extruder speed for the printing screen; not the
+        # positions and stepper lists, which change constantly.
+        objects["motion_report"] = ["live_velocity", "live_extruder_velocity"]
         await self.call("printer.objects.subscribe", on_result=apply, objects=objects)
         log.info("subscribed to printer objects")
 

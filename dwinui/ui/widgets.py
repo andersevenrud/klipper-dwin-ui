@@ -95,11 +95,11 @@ class Thumbnail(Widget):
             return
         cw, ch = p.FONTS[1]
         text = self.placeholder[:self.size // cw]
-        yield self.key, self.area, [
-            p.fill(t.BG, *self.area),
-            p.text(self.x + (self.size - len(text) * cw) // 2, self.y + (self.size - ch) // 2,
-                   text, 1, t.DIM, t.BG),
-        ]
+        frames = [p.fill(t.BG, *self.area)]
+        if text:
+            frames.append(p.text(self.x + (self.size - len(text) * cw) // 2,
+                                 self.y + (self.size - ch) // 2, text, 1, t.DIM, t.BG))
+        yield self.key, self.area, frames
 
 
 class Text(Widget):

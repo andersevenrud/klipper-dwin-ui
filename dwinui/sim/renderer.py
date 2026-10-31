@@ -148,7 +148,7 @@ class Canvas:
                 self.unknown.append(cmd)
                 return
             cw, ch = p.FONTS[size]
-            if flags & 0x40:
+            if flags & 0x40 and text:
                 d.rectangle((x, y, x + cw * len(text) - 1, y + ch - 1), fill=color(bg))
             if self.hzk:
                 self._hzk_text(x, y, args[9:], size, color(fg))

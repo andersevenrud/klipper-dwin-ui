@@ -134,7 +134,7 @@ def area_move(direction: int, distance: int, color: int, x1: int, y1: int, x2: i
 # so fixed-width fields keep their length either way.
 FALLBACK = {
     "°": " ", "←": "<", "→": ">", "↑": "^", "↓": "v", "…": "~", "•": "*", "±": "~",
-    "×": "x", "▲": "^", "▼": "v", "▶": ">", "◀": "<", "✓": "*", "µ": "u", "↻": "*",
+    "×": "x", "▲": "^", "▼": "v", "▶": ">", "◀": "<", "✓": "*", "µ": "u", "↻": "*", "³": "3",
 }
 _glyphs: dict[str, int] = {}
 

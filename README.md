@@ -12,8 +12,9 @@ without Marlin and without a Klipper fork.
 
 - **Home screen**, like Mainsail's dashboard: every temperature sensor
   Klipper knows about, a live hotend/bed graph and the toolhead position.
-- **Printing screen** while a job runs: progress, time left, temperatures,
-  speed, flow, fan and Z.
+- **Printing screen** while a job runs: the slicer's thumbnail, layer and
+  height, progress, time left and finish time, temperatures, live speed and
+  volumetric flow, fan, Z offset and filament used.
 - **Menus:**
   - **Print:** browse folders and start a print from a preview with the
     slicer's thumbnail, print time and filament. Recent prints (from

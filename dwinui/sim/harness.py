@@ -34,9 +34,14 @@ class Harness:
         return self
 
     async def __aexit__(self, *exc) -> None:
+        crashed = [t for t in self._tasks if t.done() and not t.cancelled() and t.exception()]
         for task in self._tasks:
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
+        if crashed and exc[0] is None:
+            # A background task (the render loop, say) died: fail loudly with
+            # its own error instead of some later assertion.
+            raise crashed[0].exception()
 
     async def settle(self, seconds: float = 0.15) -> None:
         await asyncio.sleep(seconds)

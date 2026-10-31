@@ -95,6 +95,7 @@ class FakeMoonraker:
                            "gcode_position": [0.0, 0.0, 0.0, 0.0],
                            "homing_origin": [0.0, 0.0, 0.0, 0.0]},
             "fan": {"speed": 0.0},
+            "motion_report": {"live_velocity": 0.0, "live_extruder_velocity": 0.0},
             "idle_timeout": {"state": "Idle"},
             "heaters": {"available_heaters": ["heater_bed", "extruder"],
                         "available_sensors": ["heater_bed", *SENSORS, "extruder"]},
@@ -138,7 +139,10 @@ class FakeMoonraker:
             upd["print_stats"] = {"print_duration": dur, "total_duration": dur,
                                   "filament_used": ps.get("filament_used", 0.0) + dt * 0.6}
             upd["display_status"] = {"progress": progress}
-            upd["gcode_move"] = {"gcode_position": [110.0, 110.0, round(0.2 + progress * 40, 2), 0.0]}
+            upd["gcode_move"] = {"gcode_position": [110.0, 110.0, round(0.2 + progress * 47.8, 2), 0.0]}
+            wobble = math.sin(dur * 7)
+            upd["motion_report"] = {"live_velocity": round(140 + 60 * wobble, 1),
+                                    "live_extruder_velocity": round(2.4 + 1.2 * wobble, 3)}
             if progress >= 1.0:
                 upd["print_stats"]["state"] = "complete"
         self.printer.update(upd)
@@ -229,7 +233,8 @@ class FakeMoonraker:
                     {"width": w, "height": w, "size": 0, "relative_path": f".thumbs/{base}-{w}x{w}.png"}
                     for w in (32, 300)]
                 return {"filename": path, "estimated_time": est, "filament_total": fil,
-                        "layer_height": 0.2, "object_height": 48.0, "slicer": "OrcaSlicer",
+                        "layer_height": 0.2, "first_layer_height": 0.2, "object_height": 48.0,
+                        "layer_count": 240, "slicer": "OrcaSlicer",
                         "slicer_version": "2.2.0", "thumbnails": thumbs}
         raise RPCError(f"Metadata not available for <{filename}>", 404)
 

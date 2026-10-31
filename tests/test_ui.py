@@ -188,3 +188,30 @@ def test_print_again_after_a_finished_print():
             assert h.printer.get("print_stats", "filename") == "filament_clip.gcode"
             assert isinstance(h.app.top, PrintingScreen)
     run(go())
+
+
+def test_printing_screen_layers_speed_flow_and_thumbnail():
+    from dwinui.ui.screens.printing import PrintingScreen
+
+    async def go():
+        async with Harness(Config(long_press_ms=150, dim_timeout=0)) as h:
+            await h.api.call("printer.print.start", filename="filament_clip.gcode")
+            await h.settle(0.6)
+            screen = h.app.top
+            assert isinstance(screen, PrintingScreen)
+            assert screen.thumb.jpeg                                # slicer thumbnail loaded
+            h.printer.update({"gcode_move": {"gcode_position": [0, 0, 2.4, 0]},
+                              "motion_report": {"live_velocity": 120.0,
+                                                "live_extruder_velocity": 2.0}})
+            screen.refresh()
+            assert screen.layer.value == "12 / 240"                 # from Z and layer height
+            assert screen.z.value == "2.40/48.00"
+            assert screen.speed.value == "120mm/s"
+            assert screen.flow.value == "5mm³/s"                    # 2 mm/s of 1.75 mm filament
+            h.printer.update({"print_stats": {"info": {"current_layer": 30, "total_layer": 200}}})
+            screen.refresh()
+            assert screen.layer.value == "30 / 200"                 # the slicer's own numbers win
+            h.printer.update({"print_stats": {"state": "complete", "info": {"current_layer": None, "total_layer": 200}}})
+            screen.refresh()
+            assert screen.layer.value == "200 / 200"
+    run(go())
