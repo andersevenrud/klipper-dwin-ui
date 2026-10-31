@@ -228,7 +228,7 @@ class PrintingScreen(HeaderScreen):
         def again() -> None:
             self.api.fire("printer.print.start", filename=filename)
 
-        self.app.push(Confirm(self.app, title, filename, again, ok="Reprint", cancel="Home",
+        self.app.push(Confirm(self.app, title, filename, again, ok="Reprint", cancel="Exit",
                               on_cancel=self.app.dismiss_job))
 
     def on_back(self) -> None:
