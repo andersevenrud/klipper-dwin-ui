@@ -53,7 +53,7 @@ class PrintingScreen(HeaderScreen):
         value_x = p.WIDTH - 6 - 7 * 10
         for i, (key, s, icon) in enumerate((("elapsed", "Elapsed", True),
                                              ("remaining", "Left", True),
-                                             ("done", "Done at", False))):
+                                             ("done", "Done at", True))):
             label(key, RX, T + 38 + 34 * i, s, icon=icon)
         self.elapsed = Text("st.elapsed", value_x, T + 36, 7, font=2, align="right")
         self.remaining = Text("st.remaining", value_x, T + 70, 7, font=2, align="right")

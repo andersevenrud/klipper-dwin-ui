@@ -117,6 +117,7 @@ VARIANTS = {
 # pack still shows the older icons correctly.
 LATER_TILE_ICONS = {"fans": "propeller", "lights": "bulb", "print": "printer",
                     "calibrate": "ruler-measure"}
+LATER_STATUS_ICONS = {"done": "flag"}
 
 
 def fetch(name: str) -> Path:
@@ -248,6 +249,7 @@ def build_icons(ttf: Path, css: Path) -> tuple[bytes, dict, Image.Image]:
              for name, tabler in names.items()]
     order += [(variant, name, tabler) for name, tabler in LATER_TILE_ICONS.items()
               for variant in ("tile", "tile_sel")]
+    order += [("small", name, tabler) for name, tabler in LATER_STATUS_ICONS.items()]
     for variant, name, tabler in order:
         size, fg, bg, _ = VARIANTS[variant]
         if tabler not in codepoints:
