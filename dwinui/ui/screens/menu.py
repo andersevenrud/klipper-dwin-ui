@@ -106,6 +106,12 @@ class MenuScreen(HeaderScreen):
         ]
 
     def _cancel(self) -> None:
+        from .cancel import CancelScreen, print_objects
+
+        if len(print_objects(self.printer)) > 1:
+            self.app.push(CancelScreen(self.app))      # the whole print, or one object
+            return
+
         def ok() -> None:
             self.api.fire("printer.print.cancel")
             self.app.pop_to_root()

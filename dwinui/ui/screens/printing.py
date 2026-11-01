@@ -103,8 +103,9 @@ class PrintingScreen(HeaderScreen):
         self.header_title.value = label
         self.header_title.fg = color
 
-        # Only once the job has ended: a press then opens Home / Reprint.
-        self.hint.value = "" if pr.job_active else "Press to continue"
+        # While printing a plate: the object being printed. Once the job has
+        # ended: a press opens Exit / Reprint.
+        self.hint.value = self._current_object() if pr.job_active else "Press to continue"
         filename = pr.get("print_stats", "filename", "")
         if filename and filename != self._metadata_for:
             self._metadata_for = filename
@@ -156,6 +157,15 @@ class PrintingScreen(HeaderScreen):
             msg = [reason[:32], msg[0]]
         self.message1.value, self.message2.value = msg[0], msg[1]
         self.message1.fg = t.WARN if reason else t.DIM
+
+    def _current_object(self) -> str:
+        from .cancel import object_labels, print_objects
+
+        names = print_objects(self.printer)
+        current = self.printer.get("exclude_object", "current_object")
+        if len(names) < 2 or current not in names:
+            return ""
+        return f"Object {names.index(current) + 1}/{len(names)}: {object_labels(names)[current]}"
 
     def _layers(self) -> tuple[int | None, int | None]:
         """Layer x / y: from the slicer (SET_PRINT_STATS_INFO) if it reports it,

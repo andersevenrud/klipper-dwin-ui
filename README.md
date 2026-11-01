@@ -14,7 +14,10 @@ without Marlin and without a Klipper fork.
   Klipper knows about, a live hotend/bed graph and the toolhead position.
 - **Printing screen** while a job runs: the slicer's thumbnail, layer and
   height, progress, time left and finish time, temperatures, live speed and
-  volumetric flow, fan, Z offset and filament used.
+  volumetric flow, fan, Z offset, filament used, and on a plate of several
+  objects, the one being printed.
+- **Cancel one object** of a plate (`exclude_object`) or the whole print,
+  from one list.
 - **Pauses** wake the screen with a beep. When a filament sensor sees no
   filament, the printing screen says so, and the menu offers Resume and
   Extrude first.

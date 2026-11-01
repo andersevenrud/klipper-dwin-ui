@@ -79,6 +79,9 @@ PROMPT_DEMO = [
     "action:prompt_footer_button Cancel print|RESPOND TYPE=command MSG=action:prompt_end|error",
     "action:prompt_show",
 ]
+# Objects of a multi-part plate, as Klipper names them (upper-cased).
+PLATE = {"benchy.gcode": ["3DBENCHY.STL_ID_0_COPY_0", "3DBENCHY.STL_ID_0_COPY_1",
+                          "SHAPE-BOX_ID_1_COPY_0", "FILAMENT_CLIP_ID_2_COPY_0"]}
 # Seconds these take on the fake printer.
 SLOW = {"BED_MESH_CALIBRATE": 3.0, "SCREWS_TILT_CALCULATE": 2.0, "PID_CALIBRATE": 4.0}
 # What PID_CALIBRATE comes up with.
@@ -152,6 +155,7 @@ class FakeMoonraker:
                              "z_position_upper": None},
             "bed_screws": {"is_active": False, "state": None, "current_screw": 0, "accepted_screws": 0},
             "screws_tilt_adjust": {"error": False, "max_deviation": None, "results": {}},
+            "exclude_object": {"objects": [], "excluded_objects": [], "current_object": None},
             "bed_mesh": {"profile_name": "", "mesh_matrix": [[]], "mesh_min": [0.0, 0.0],
                          "mesh_max": [0.0, 0.0],
                          "profiles": {"default": {"points": fake_mesh(), "mesh_params": MESH_PARAMS},
@@ -190,6 +194,10 @@ class FakeMoonraker:
             upd["print_stats"] = {"print_duration": dur, "total_duration": dur,
                                   "filament_used": ps.get("filament_used", 0.0) + dt * 0.6}
             upd["display_status"] = {"progress": progress}
+            left = [o["name"] for o in self.printer.get("exclude_object", "objects", [])
+                    if o["name"] not in self.printer.get("exclude_object", "excluded_objects", [])]
+            if left:                                    # one after the other, a few seconds each
+                upd["exclude_object"] = {"current_object": left[int(dur / 3) % len(left)]}
             upd["gcode_move"] = {"gcode_position": [110.0, 110.0, round(0.2 + progress * 47.8, 2), 0.0]}
             wobble = math.sin(dur * 7)
             upd["motion_report"] = {"live_velocity": round(140 + 60 * wobble, 1),
@@ -334,6 +342,9 @@ class FakeMoonraker:
             "print_stats": {"state": "printing", "filename": filename, "print_duration": 0.0,
                             "filament_used": 0.0},
             "display_status": {"progress": 0.0},
+            "exclude_object": {"objects": [{"name": n, "center": [0.0, 0.0], "polygon": []}
+                                           for n in PLATE.get(filename, [])],
+                               "excluded_objects": [], "current_object": None},
             "extruder": {"target": 210.0}, "heater_bed": {"target": 60.0},
             "toolhead": {"homed_axes": "xyz"},
         })
@@ -572,6 +583,18 @@ class FakeMoonraker:
                 "save_config_pending": True,
                 "save_config_pending_items": {heater: {"control": "pid", "pid_kp": f"{kp:.3f}",
                                                        "pid_ki": f"{ki:.3f}", "pid_kd": f"{kd:.3f}"}}}})
+        elif cmd == "EXCLUDE_OBJECT":
+            name = line.partition("=")[2].strip().strip('"').upper()
+            eo = pr.status.get("exclude_object", {})
+            if name not in [o["name"] for o in eo.get("objects", [])]:
+                raise RPCError(f"Unknown object: {name}", 400)
+            excluded = list(eo.get("excluded_objects", []))
+            if name not in excluded:
+                excluded.append(name)
+                self._respond(f"// Excluding object {name}")
+            pr.update({"exclude_object": {"excluded_objects": excluded,
+                                          "current_object": None if eo.get("current_object") == name
+                                          else eo.get("current_object")}})
         elif cmd == "RUNOUT_DEMO":
             # What a runout sensor's runout_gcode (PAUSE) does mid-print.
             if not pr.job_active:
