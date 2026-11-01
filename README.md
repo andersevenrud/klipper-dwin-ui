@@ -10,53 +10,24 @@ without Marlin and without a Klipper fork.
 
 ## Features
 
-- **Home screen**, like Mainsail's dashboard: every temperature sensor
-  Klipper knows about, a live hotend/bed graph and the toolhead position.
-- **Printing screen** while a job runs: the slicer's thumbnail, layer and
-  height, progress, time left and finish time, temperatures, live speed and
-  volumetric flow, fan, Z offset, filament used, and on a plate of several
-  objects, the one being printed.
-- **Cancel one object** of a plate (`exclude_object`) or the whole print,
-  from one list.
-- **Pauses** wake the screen with a beep. When a filament sensor sees no
-  filament, the printing screen says so, and the menu offers Resume and
-  Extrude first.
-- **Messages** from `M117` pop up briefly at the bottom of the screen.
-- **Macro prompts** (`action:prompt_begin` ...), as Mainsail and
-  KlipperScreen show them: the text, and the buttons as a list.
-- **Menus:**
-  - **Print:** browse folders and start a print from a preview with the
-    slicer's thumbnail, print time and filament. Recent prints (from
-    Moonraker's history) are one press away, and files can be deleted from
-    the preview.
-  - **Temperature:** set targets, or use a preheat preset.
-  - **Move:** homing, and jogging with the knob.
-  - **Extrude:** heat the hotend to a preset, run your own
-    `LOAD_FILAMENT`/`UNLOAD_FILAMENT` macros (names set in `dwinui.conf`,
-    rows shown only when they exist), or extrude and retract by hand.
-  - **Tune:** speed, flow and Z babystepping, which
-    can be saved to the probe or Z endstop offset (`SAVE_CONFIG` waits until
-    the print is done).
-  - **Fans:** set the part fan and any `fan_generic`, and see what the
-    automatic fans are doing.
-  - **Lights:** dim or switch `output_pin` lights and LEDs. The tile only
-    appears when the printer has lights.
-  - **Calibrate:** a bed mesh heatmap (calibrate, load or clear profiles),
-    screws tilt results, bed screws, Z tilt or gantry levelling, PID tuning
-    at a preset's temperature or your own, and the paper test for the probe
-    offset or Z endstop. The paper test, bed screws, screws tilt and PID
-    results also open when those are started from Mainsail or a macro, with
-    the knob for `TESTZ` and rows for `ACCEPT`/`ABORT`.
-  - **Macros**, and **System:** restarts, emergency stop, host power,
-    backlight, Moonraker power devices (`[power]`), and a console with
-    Klipper's recent messages.
-- **When Klipper isn't ready**, the screen shows why and offers what helps:
-  restarts, switching on or power-cycling the printer's supply if Moonraker
-  controls it, and the console.
-- **Knob controls:** turn, press, and hold to go back; see
-  [Controls](#controls).
-- **Sharper font, icons and a Klipper boot logo**, flashed onto the display
-  once from a microSD card.
+- **Home screen** with all your temperatures, a live graph and the
+  toolhead position.
+- **Printing screen** with the thumbnail, progress, time left, layer,
+  temperatures and speed.
+- **Start prints** from a preview with the thumbnail, browse folders, or
+  reprint something recent.
+- **Control the printer:** temperatures and presets, homing and moving,
+  filament, fans and lights, and speed, flow and Z offset while printing.
+- **Calibrate:** bed mesh, bed levelling screws, Z offset and PID tuning.
+- **Cancel** the whole print, or just one object on the plate.
+- **Pop-ups** for printer messages, macro questions, pauses and calibration
+  results, also when they come from Mainsail or a macro.
+- **Macros, restarts and power:** run your macros, restart Klipper or the
+  host, and switch the printer's power if Moonraker controls it.
+- **Shows what's wrong** when Klipper isn't ready, and offers a fix.
+- **One knob:** turn, press, and hold to go back. See [Controls](#controls).
+- **Sharper font, icons and a Klipper boot logo**, flashed once from a
+  microSD card.
 
 ## What you need
 
