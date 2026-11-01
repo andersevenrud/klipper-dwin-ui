@@ -1,6 +1,6 @@
 [project]
 name = "dwinui"
-version = "1.0.0"
+version = "1.1.0"
 description = "KlipperScreen-like UI for the Ender 3 V2 DWIN display, driven over Moonraker"
 readme = "README.md"
 license = "MIT"
