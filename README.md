@@ -39,11 +39,11 @@ without Marlin and without a Klipper fork.
   - **Lights:** dim or switch `output_pin` lights and LEDs. The tile only
     appears when the printer has lights.
   - **Calibrate:** a bed mesh heatmap (calibrate, load or clear profiles),
-    screws tilt results, bed screws, Z tilt or gantry levelling, and the
-    paper test for the probe offset or Z endstop. The paper test, bed
-    screws and screws tilt results also open when those are started from
-    Mainsail or a macro, with the knob for `TESTZ` and rows for
-    `ACCEPT`/`ABORT`.
+    screws tilt results, bed screws, Z tilt or gantry levelling, PID tuning
+    at a preset's temperature or your own, and the paper test for the probe
+    offset or Z endstop. The paper test, bed screws, screws tilt and PID
+    results also open when those are started from Mainsail or a macro, with
+    the knob for `TESTZ` and rows for `ACCEPT`/`ABORT`.
   - **Macros**, and **System:** restarts, emergency stop, host power,
     backlight, Moonraker power devices (`[power]`), and a console with
     Klipper's recent messages.

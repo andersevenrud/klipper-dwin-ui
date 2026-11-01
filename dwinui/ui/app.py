@@ -73,6 +73,7 @@ class App:
         self._message: str | None = None   # last M117 seen; None until ready
         self.prompts = PromptTracker()
         self._tilt_results: str | None = None   # screws tilt result seen; None until ready
+        self._pid_result: tuple[tuple[str, str, str], float] | None = None
 
         printer.listen(self.invalidate)
         printer.listen(self._watch_message)
@@ -188,6 +189,21 @@ class App:
                 and not pr.job_active and not any(isinstance(s, ScrewsTiltScreen) for s in self.stack):
             self._take_over(ScrewsTiltScreen(self))
         self._tilt_results = key
+        if self._pid_result:
+            self._show_pid_result()
+
+    def _show_pid_result(self) -> None:
+        """PID_CALIBRATE reports before it marks the values for SAVE_CONFIG;
+        wait a moment for those, which say which heater was tuned."""
+        from .screens.pid import result_dialog, tuned_heater
+
+        values, at = self._pid_result
+        heater = tuned_heater(self.printer.get("configfile", "save_config_pending_items", {}), values[0])
+        if heater is None and time.monotonic() - at < 2.0:
+            asyncio.get_running_loop().call_later(0.3, self.invalidate)
+            return
+        self._pid_result = None
+        self._take_over(result_dialog(self, values, heater))
 
     def _take_over(self, screen: Screen) -> None:
         self.push(screen)
@@ -315,6 +331,11 @@ class App:
         if line.startswith("!!"):
             self.toast(line.lstrip("! ").strip(), "error", 5.0)
         if any([self.prompts.feed(part) for part in line.splitlines()]):
+            self.invalidate()
+        from .screens.pid import parse_result
+        values = parse_result(line)
+        if values:
+            self._pid_result = (values, time.monotonic())
             self.invalidate()
         for fn in list(self._console_listeners):
             fn("response", line)

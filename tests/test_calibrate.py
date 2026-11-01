@@ -43,7 +43,7 @@ def test_calibrate_menu_lists_what_the_printer_has():
             h.app.push(CalibrateScreen(h.app))
             await h.settle(0.3)
             assert labels(h.app.top)[1:] == ["Bed mesh", "Screws tilt", "Bed screws", "Probe Z offset",
-                                             "Z endstop"]
+                                             "PID hotend", "PID bed", "Z endstop"]
     run(go())
 
 

@@ -50,6 +50,8 @@ CONFIG_SETTINGS = {
     "screws_tilt_adjust": dict(SCREWS),
     "bed_screws": dict(SCREWS),
     "stepper_z": {"position_endstop": 0.0},
+    "extruder": {"control": "pid"},
+    "heater_bed": {"control": "pid"},
 }
 # What SCREWS_TILT_CALCULATE reports, screw1 being the reference.
 SCREWS_TILT = {
@@ -78,7 +80,9 @@ PROMPT_DEMO = [
     "action:prompt_show",
 ]
 # Seconds these take on the fake printer.
-SLOW = {"BED_MESH_CALIBRATE": 3.0, "SCREWS_TILT_CALCULATE": 2.0}
+SLOW = {"BED_MESH_CALIBRATE": 3.0, "SCREWS_TILT_CALCULATE": 2.0, "PID_CALIBRATE": 4.0}
+# What PID_CALIBRATE comes up with.
+PID = {"extruder": (22.865, 1.306, 100.090), "heater_bed": (68.214, 0.792, 1469.317)}
 # Moonraker [power] devices. "printer" behaves like the printer's supply:
 # off makes the MCU unreachable, on brings Klipper back.
 POWER = {
@@ -418,6 +422,9 @@ class FakeMoonraker:
             for line in script.splitlines():
                 self.gcode_log.append(line)
                 cmd = line.split()[0].upper() if line.strip() else ""
+                if cmd == "PID_CALIBRATE":       # heats while it works
+                    heater = dict(re.findall(r"([A-Z_]+)=(\S+)", line.upper()))["HEATER"].lower()
+                    self.printer.update({heater: {"target": float(line.upper().split("TARGET=")[1].split()[0])}})
                 if cmd in SLOW:
                     await asyncio.sleep(SLOW[cmd] / self.speedup)
                 self._gcode(line.strip())
@@ -553,6 +560,18 @@ class FakeMoonraker:
             kind = words.get("TYPE", "ECHO").lower()
             prefix = {"command": "//", "error": "!!"}.get(kind, "echo:")
             self._respond(f"{prefix} {(m.group(1) or m.group(2) or '').strip() if m else ''}")
+        elif cmd == "PID_CALIBRATE":
+            heater = words["HEATER"].lower()
+            if heater not in PID:
+                raise RPCError(f"Unknown heater '{heater}'", 400)
+            kp, ki, kd = PID[heater]
+            self._respond(f"// PID parameters: pid_Kp={kp:.3f} pid_Ki={ki:.3f} pid_Kd={kd:.3f}\n"
+                          "// The SAVE_CONFIG command will update the printer config file\n"
+                          "// with these parameters and restart the printer.")
+            pr.update({heater: {"target": 0.0}, "configfile": {
+                "save_config_pending": True,
+                "save_config_pending_items": {heater: {"control": "pid", "pid_kp": f"{kp:.3f}",
+                                                       "pid_ki": f"{ki:.3f}", "pid_kd": f"{kd:.3f}"}}}})
         elif cmd == "RUNOUT_DEMO":
             # What a runout sensor's runout_gcode (PAUSE) does mid-print.
             if not pr.job_active:

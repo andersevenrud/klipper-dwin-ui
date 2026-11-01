@@ -86,12 +86,19 @@ class CalibrateScreen(ListScreen):
                               enabled=idle))
         if self.printer.has_probe:
             items.append(Item("Probe Z offset", action=run("PROBE_CALIBRATE", "Probing"), enabled=idle))
+        for heater, label in (("extruder", "PID hotend"), ("heater_bed", "PID bed")):
+            if self.settings.get(heater, {}).get("control") == "pid":
+                items.append(Item(label, action=lambda h=heater: self._pid(h), enabled=idle))
         # Klipper only has Z_ENDSTOP_CALIBRATE with a physical Z endstop.
         if "position_endstop" in self.settings.get("stepper_z", {}):
             items.append(Item("Z endstop", action=run("Z_ENDSTOP_CALIBRATE", "Z endstop"),
                               enabled=idle))
         self.set_items(items)
         self.empty_text = "Nothing to calibrate"
+
+    def _pid(self, heater: str) -> None:
+        from .pid import PidScreen
+        self.app.push(PidScreen(self.app, heater))
 
 
 class ScrewsTiltScreen(ListScreen):

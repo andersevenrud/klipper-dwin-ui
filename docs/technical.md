@@ -81,6 +81,10 @@ ends. Anything opened on top of them closes with them.
 - **Screws tilt results:** new `screws_tilt_adjust` results open the
   screws tilt screen, unless a print is running. The results already there
   when dwinui connects don't.
+- **PID results:** the `pid_Kp=… pid_Ki=… pid_Kd=…` response of
+  `PID_CALIBRATE` opens a Save/Later dialog. Klipper marks the values for
+  `SAVE_CONFIG` just after that response; the matching pending section
+  names the heater, so the dialog waits up to 2 s for it.
 
 **Panel resets.** The render cache assumes the panel still shows what was
 sent. If the panel reboots on its own (a power glitch), it comes back on its
