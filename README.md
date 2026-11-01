@@ -17,7 +17,9 @@ without Marlin and without a Klipper fork.
 - **Start prints** from a preview with the thumbnail, browse folders, or
   reprint something recent.
 - **Control the printer:** temperatures and presets, homing and moving,
-  filament, fans and lights, and speed, flow and Z offset while printing.
+  filament, fans and lights.
+- **Tune** speed, flow, Z offset, pressure advance, speed and acceleration
+  limits, and retraction, while printing or not.
 - **Calibrate:** bed mesh, bed levelling screws, Z offset and PID tuning.
 - **Cancel** the whole print, or just one object on the plate.
 - **Pop-ups** for printer messages, macro questions, pauses and calibration

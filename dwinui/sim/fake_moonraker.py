@@ -133,9 +133,13 @@ class FakeMoonraker:
                             "total_duration": 0.0, "filament_used": 0.0, "message": ""},
             "display_status": {"progress": 0.0, "message": None},
             "virtual_sdcard": {"progress": 0.0, "is_active": False},
-            "extruder": {"temperature": 23.4, "target": 0.0, "power": 0.0},
+            "extruder": {"temperature": 23.4, "target": 0.0, "power": 0.0, "pressure_advance": 0.04,
+                         "smooth_time": 0.04},
             "heater_bed": {"temperature": 22.1, "target": 0.0, "power": 0.0},
-            "toolhead": {"homed_axes": "", "position": [0, 0, 0, 0]},
+            "toolhead": {"homed_axes": "", "position": [0, 0, 0, 0], "max_velocity": 300.0,
+                         "max_accel": 3000.0, "minimum_cruise_ratio": 0.5, "square_corner_velocity": 5.0},
+            "firmware_retraction": {"retract_length": 0.8, "retract_speed": 40.0,
+                                    "unretract_extra_length": 0.0, "unretract_speed": 30.0},
             "gcode_move": {"speed_factor": 1.0, "extrude_factor": 1.0,
                            "gcode_position": [0.0, 0.0, 0.0, 0.0],
                            "homing_origin": [0.0, 0.0, 0.0, 0.0]},
@@ -583,6 +587,18 @@ class FakeMoonraker:
                 "save_config_pending": True,
                 "save_config_pending_items": {heater: {"control": "pid", "pid_kp": f"{kp:.3f}",
                                                        "pid_ki": f"{ki:.3f}", "pid_kd": f"{kd:.3f}"}}}})
+        elif cmd in ("SET_VELOCITY_LIMIT", "SET_PRESSURE_ADVANCE", "SET_RETRACTION"):
+            obj, fields = {
+                "SET_VELOCITY_LIMIT": ("toolhead", {"VELOCITY": "max_velocity", "ACCEL": "max_accel",
+                                                    "SQUARE_CORNER_VELOCITY": "square_corner_velocity",
+                                                    "MINIMUM_CRUISE_RATIO": "minimum_cruise_ratio"}),
+                "SET_PRESSURE_ADVANCE": ("extruder", {"ADVANCE": "pressure_advance",
+                                                      "SMOOTH_TIME": "smooth_time"}),
+                "SET_RETRACTION": ("firmware_retraction", {
+                    "RETRACT_LENGTH": "retract_length", "RETRACT_SPEED": "retract_speed",
+                    "UNRETRACT_EXTRA_LENGTH": "unretract_extra_length", "UNRETRACT_SPEED": "unretract_speed"}),
+            }[cmd]
+            pr.update({obj: {field: float(words[key]) for key, field in fields.items() if key in words}})
         elif cmd == "EXCLUDE_OBJECT":
             name = line.partition("=")[2].strip().strip('"').upper()
             eo = pr.status.get("exclude_object", {})

@@ -199,9 +199,10 @@ class Moonraker:
         # positions and stepper lists, which change constantly.
         objects["motion_report"] = ["live_velocity", "live_extruder_velocity"]
         # Calibration helpers, when configured: the screens that take over
-        # while Klipper waits for input, and the screws tilt result. And the
-        # print's objects, for cancelling one.
-        for name in ("manual_probe", "bed_screws", "screws_tilt_adjust", "exclude_object"):
+        # while Klipper waits for input, and the screws tilt result. The
+        # print's objects, for cancelling one, and the retraction settings.
+        for name in ("manual_probe", "bed_screws", "screws_tilt_adjust", "exclude_object",
+                     "firmware_retraction"):
             if name in self.printer.objects:
                 objects[name] = None
         await self.call("printer.objects.subscribe", on_result=apply, objects=objects)

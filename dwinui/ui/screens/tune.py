@@ -1,11 +1,13 @@
-"""Live print tuning: speed, flow and babystepping. Temperatures and fans
-have their own screens."""
+"""Live print tuning: speed, flow, babystepping, pressure advance, and the
+machine limits and retraction. Temperatures and fans have their own
+screens."""
 
 from __future__ import annotations
 
 import asyncio
 
 from ..screen import Adjust, Confirm, Item, ListScreen, NumberEdit
+from .limits import LimitsScreen, PressureAdvanceScreen, RetractionScreen
 
 
 class TuneScreen(ListScreen):
@@ -29,6 +31,10 @@ class TuneScreen(ListScreen):
                  edit=Adjust(self._babystep, lambda: f"{pr.z_offset + self._z_pending:+.3f}")),
             Item("Save Z offset", action=self._save_offset,
                  enabled=lambda: abs(pr.z_offset) >= 0.0005),
+            Item("Pressure advance", action=lambda: self.app.push(PressureAdvanceScreen(self.app))),
+            Item("Limits", action=lambda: self.app.push(LimitsScreen(self.app))),
+            *([Item("Retraction", action=lambda: self.app.push(RetractionScreen(self.app)))]
+              if "firmware_retraction" in pr.objects else []),
         ])
 
     def _save_offset(self) -> None:
